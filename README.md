@@ -1,9 +1,9 @@
-# Energy Allocation Platform Foundation
+# Smart-Grid Platform Foundation
 
 Minimal entry point for the repository. Detailed implementation, tooling, operations, and integration guidance lives in `docs/`.
 
 ## Service Offered
-Energy Allocation is a multi-tenant energy optimization service for industrial and commercial facilities.
+Smart-Grid is a multi-tenant energy optimization service for industrial and commercial facilities.
 It ingests meter and connector data, builds facility-level usage features, and generates allocation recommendations that reduce cost, improve utilization, and support decarbonization targets.
 The platform exposes these capabilities through a secured API and a frontend dashboard for onboarding, monitoring, alerts, recommendations, ROI analysis, and partner integrations.
 
