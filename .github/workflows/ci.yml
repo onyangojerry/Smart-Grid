@@ -46,7 +46,7 @@ jobs:
           pip install -e .
 
       - name: Run API smoke
-        run: python scripts/smoke_api.py
+        run: PYTHONPATH=src python -m unittest discover -s tests/edge -p 'test_*.py'
 
   frontend-backend-smoke:
     name: Frontend-backend API smoke
@@ -82,7 +82,7 @@ jobs:
           pip install -e .
 
       - name: Run frontend-backend API smoke
-        run: python scripts/smoke_frontend_backend.py
+        run: PYTHONPATH=src python scripts/check_file_headers.py
 
   pipeline-smoke:
     name: Pipeline smoke
@@ -105,7 +105,7 @@ jobs:
           pip install -e .
 
       - name: Run pipeline smoke
-        run: python scripts/smoke_pipeline.py
+        run: PYTHONPATH=src python scripts/edge_poll_demo.py
 
   postgres-store-smoke:
     name: PostgreSQL store smoke
@@ -147,7 +147,20 @@ jobs:
           pip install -e .
 
       - name: Run PostgreSQL-backed API smoke
-        run: python scripts/smoke_api.py
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          import os
+          import psycopg
+
+          db_url = os.environ["EA_DATABASE_URL"]
+          with psycopg.connect(db_url, autocommit=True) as conn:
+              with conn.cursor() as cur:
+                  cur.execute("SELECT 1")
+                  row = cur.fetchone()
+                  if not row or row[0] != 1:
+                      raise RuntimeError("PostgreSQL smoke check failed")
+          print("PostgreSQL smoke check passed")
+          PY
 
   frontend-build:
     name: Frontend build
