@@ -17,18 +17,7 @@ This plan is designed to move from the current simulated transport to reliable f
 - Cloud API and control loop exist under `/api/v1`.
 - `point_mappings` table and core telemetry/control tables already exist.
 - Rule safe mode is implemented when telemetry is stale/missing.
-- Edge runtime package exists under `src/energy_api/edge/` with:
-  - Modbus adapter
-  - Decoder
-  - Polling + staleness tracking
-  - SQLite buffering + replay
-  - Startup recovery flow
-  - Command execution/reconciliation
-  - Runtime observability
-- Remaining major gaps:
-  - MQTT transport wiring
-  - Cloud-side edge command pull/ack integration path
-  - Dedicated edge process/container wiring in deployment manifests
+- Real edge process, Modbus transport, MQTT runtime wiring, and local buffering are not implemented yet.
 
 ## Target architecture
 

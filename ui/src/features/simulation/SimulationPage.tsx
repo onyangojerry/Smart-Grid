@@ -10,6 +10,7 @@ import { StatCard } from "../../components/ui/StatCard";
 import { DataTable } from "../../components/tables/DataTable";
 import { ActionHistoryChart } from "../../components/charts/ActionHistoryChart";
 import type { SimulationRunDetail } from "../../types";
+import "../../styles/features.css";
 
 export function SimulationPage() {
   const { siteId } = useParams();
@@ -23,15 +24,16 @@ export function SimulationPage() {
   });
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div className="page-content">
       <PageHeader title="Simulation" subtitle={siteId} />
       <Card title="Run simulation">
         <SimulationForm onSubmit={(body) => mutation.mutate({ siteId, body })} loading={mutation.isPending} />
         {mutation.isError ? <ErrorBanner error={mutation.error as Error} /> : null}
       </Card>
+      
       {latestResult ? (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(180px,1fr))", gap: 8 }}>
+          <div className="stats-grid">
             <StatCard label="Baseline cost" value={latestResult.baseline_cost} unit="USD" />
             <StatCard label="Optimized cost" value={latestResult.optimized_cost} unit="USD" />
             <StatCard label="Savings %" value={latestResult.savings_percent} unit="%" />
@@ -63,8 +65,9 @@ export function SimulationPage() {
           </Card>
         </>
       ) : null}
-      <Card title="DEFERRED">
-        <div style={{ color: "#ef6c00" }}>DEFERRED: async simulation detail endpoint `/api/v1/sites/{`{site_id}`}/simulation/{`{sim_id}`}` is not implemented.</div>
+
+      <Card title="Status">
+        <div className="deferred-box">DEFERRED: async simulation detail endpoint `/api/v1/sites/{site_id}/simulation/{'{sim_id}'}` is not implemented.</div>
       </Card>
     </div>
   );

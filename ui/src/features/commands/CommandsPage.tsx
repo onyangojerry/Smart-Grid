@@ -8,6 +8,7 @@ import { Card } from "../../components/ui/Card";
 import { ErrorBanner } from "../../components/ui/ErrorBanner";
 import { DataTable } from "../../components/tables/DataTable";
 import { Badge } from "../../components/ui/Badge";
+import "../../styles/features.css";
 
 export function CommandsPage() {
   const { siteId } = useParams();
@@ -29,11 +30,11 @@ export function CommandsPage() {
   });
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div className="page-content">
       <PageHeader title="Commands" subtitle={siteId} />
       <Card title="Command stream">
-        <div style={{ marginBottom: 10 }}>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <div style={{ marginBottom: 16 }}>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="form-input">
             <option value="">all</option>
             <option value="queued">queued</option>
             <option value="sent">sent</option>
@@ -45,8 +46,8 @@ export function CommandsPage() {
         {commandsQuery.isError ? (
           <>
             <ErrorBanner error={commandsQuery.error as Error} />
-            <div style={{ marginTop: 8, color: "#ef6c00" }}>
-              DEFERRED: `GET /api/v1/sites/{`{site_id}`}/commands` is not implemented in current backend.
+            <div className="deferred-box" style={{ marginTop: 16 }}>
+              DEFERRED: `GET /api/v1/sites/{site_id}/commands` is not implemented in current backend.
             </div>
           </>
         ) : (
@@ -60,14 +61,14 @@ export function CommandsPage() {
               {
                 key: "failure",
                 header: "failure_reason",
-                render: (r) => (r.failure_reason ? <span style={{ color: "#c62828" }}>{r.failure_reason}</span> : "—")
+                render: (r) => (r.failure_reason ? <span style={{ color: "var(--error)" }}>{r.failure_reason}</span> : "—")
               },
               {
                 key: "ack",
                 header: "",
                 render: (r) =>
                   r.status === "sent" || r.status === "queued" ? (
-                    <button onClick={() => ackMutation.mutate(r.id)}>Acknowledge</button>
+                    <button onClick={() => ackMutation.mutate(r.id)} className="logout-button" style={{ width: "auto" }}>Acknowledge</button>
                   ) : null
               }
             ]}

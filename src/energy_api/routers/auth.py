@@ -288,6 +288,59 @@ def mint_dev_token(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+
+@router.post("/signup")
+def signup(payload: dict[str, Any]) -> dict[str, Any]:
+    email = str(payload.get("email", "")).strip().lower()
+    password = str(payload.get("password", ""))
+    full_name = str(payload.get("name", "")).strip()
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            # Check if user exists
+            cur.execute("SELECT id FROM users WHERE lower(email) = lower(%s)", (email,))
+            if cur.fetchone():
+                raise HTTPException(status_code=400, detail="User already exists")
+
+            # Get default organization
+            cur.execute("SELECT id::text FROM organizations ORDER BY created_at ASC LIMIT 1")
+            org = cur.fetchone()
+            if not org:
+                # Create one if missing
+                cur.execute(
+                    "INSERT INTO organizations(name, legal_name, industry) VALUES ('Default Org', 'Default Org', 'energy') RETURNING id::text"
+                )
+                org = cur.fetchone()
+
+            org_id = org[0]
+
+            # Create user
+            cur.execute(
+                """
+                INSERT INTO users(email, full_name, password_hash, status)
+                VALUES (%s, %s, %s, 'active')
+                RETURNING id::text
+                """,
+                (email, full_name or email.split("@")[0], hash_password(password)),
+            )
+            user_id = cur.fetchone()[0]
+
+            # Create membership
+            cur.execute(
+                "INSERT INTO user_memberships(user_id, organization_id, role) VALUES (%s::uuid, %s::uuid, 'client_admin')",
+                (user_id, org_id),
+            )
+
+    user = _find_user_for_login(email)
+    if not user:
+        raise HTTPException(status_code=500, detail="Failed to retrieve user after signup")
+
+    token = create_access_token(user)
+    return {"access_token": token, "token_type": "bearer"}
+
 @router.post("/login")
 def login(payload: dict[str, Any]) -> dict[str, Any]:
     email = str(payload.get("email", "")).strip().lower()

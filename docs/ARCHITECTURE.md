@@ -3,21 +3,12 @@
 
 ```mermaid
 flowchart TD
-  subgraph Edge[Edge Runtime]
-    ER[edge runtime: src/energy_api/edge/runtime.py]
-    MOD[modbus adapter + poller]
-    SQL[(SQLite buffer)]
-  end
-
   subgraph Cloud[Cloud Runtime]
     API[FastAPI: src/energy_api/main.py]
     PG[(PostgreSQL)]
     UI[React UI: ui/]
   end
 
-  ER --> MOD
-  MOD --> SQL
-  ER -->|HTTP telemetry replay/ingest| API
   UI -->|HTTPS /api/v1| API
   API --> PG
 ```
@@ -43,18 +34,12 @@ flowchart TD
 - Dispatch retries exhausted: command status set `failed` with `failure_reason`.
 
 ## Failure modes and fallback behavior (not implemented)
-- MQTT broker publish/ack loop for edge transport: NOT IMPLEMENTED.
-- Edge-to-cloud command pull/ack API integration: PARTIAL (edge local command queue + reconciliation implemented, cloud-side pull workflow still pending).
-
-## Edge runtime (implemented)
-- Modbus adapter: `src/energy_api/edge/modbus_adapter.py`
-- Decoder + staleness + poller: `src/energy_api/edge/decoder.py`, `src/energy_api/edge/staleness.py`, `src/energy_api/edge/poller.py`
-- Durable buffer + replay: `src/energy_api/edge/storage/sqlite.py`, `src/energy_api/edge/replay.py`
-- Startup recovery + safety + observability: `src/energy_api/edge/runtime.py`, `src/energy_api/edge/commands.py`, `src/energy_api/edge/observability.py`
-- Fault-injection simulator: `src/energy_api/edge/simulation/modbus_server.py`
+- Edge local SQLite buffering and replay: NOT IMPLEMENTED.
+- Real Modbus transport with reconnect/backoff: NOT IMPLEMENTED (simulated send path only).
+- Real MQTT broker publish/ack loop: NOT IMPLEMENTED (publish metadata only).
 
 ## Deployment topology (current)
 - API container: `Dockerfile`, service `api` in `docker-compose.yml`.
 - Postgres container: service `postgres` with SQL init from `db/migrations/`.
 - UI container: service `ui` serving Vite dev server.
-- Separate edge Docker container/process wiring: NOT YET ADDED TO `docker-compose.yml`.
+- Separate edge Docker container: NOT IMPLEMENTED.
