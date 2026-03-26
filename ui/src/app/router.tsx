@@ -1,8 +1,10 @@
 import React from "react";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
-import { RequireAuth } from "../features/auth/useAuth";
+import { RequireAuth, useAuth } from "../features/auth/useAuth";
 import { LoginPage } from "../features/auth/LoginPage";
+import { SignupPage } from "../features/auth/SignupPage";
+import { WelcomePage } from "../features/public/WelcomePage";
 import { SitesPage } from "../features/sites/SitesPage";
 import { SiteDetailPage } from "../features/sites/SiteDetailPage";
 import { DevicesPage } from "../features/devices/DevicesPage";
@@ -11,9 +13,22 @@ import { OptimizationPage } from "../features/optimization/OptimizationPage";
 import { CommandsPage } from "../features/commands/CommandsPage";
 import { SavingsPage } from "../features/savings/SavingsPage";
 import { SimulationPage } from "../features/simulation/SimulationPage";
+import { ErrorPage } from "../components/layout/ErrorPage";
+
+function HomeRoute() {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) return <Navigate to="/sites" replace />;
+  return <WelcomePage />;
+}
 
 export const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
+  { 
+    path: "/", 
+    element: <HomeRoute />,
+    errorElement: <ErrorPage />
+  },
+  { path: "/login", element: <LoginPage />, errorElement: <ErrorPage /> },
+  { path: "/signup", element: <SignupPage />, errorElement: <ErrorPage /> },
   {
     path: "/",
     element: (
@@ -21,8 +36,8 @@ export const router = createBrowserRouter([
         <AppShell />
       </RequireAuth>
     ),
+    errorElement: <ErrorPage />,
     children: [
-      { index: true, element: <Navigate to="/sites" replace /> },
       { path: "sites", element: <SitesPage /> },
       { path: "sites/:siteId", element: <SiteDetailPage /> },
       { path: "sites/:siteId/devices", element: <DevicesPage /> },

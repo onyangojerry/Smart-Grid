@@ -10,4 +10,10 @@ export const login = (body: LoginBody) =>
     body: JSON.stringify(body)
   });
 
+export const signup = (body: LoginBody & { name?: string }) =>
+  apiFetch<LoginResponse>("/api/v1/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+
 export const getMe = () => apiFetch<User>("/api/v1/auth/me");

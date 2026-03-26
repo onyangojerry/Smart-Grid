@@ -1,0 +1,151 @@
+.welcome-main {
+  flex: 1;
+  padding: 40px 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.hero-section {
+  text-align: center;
+  padding: 60px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-title {
+  font-size: clamp(32px, 8vw, 64px);
+  font-weight: 800;
+  letter-spacing: -2px;
+  margin: 0 0 20px 0;
+  font-family: var(--syne);
+}
+
+.hero-title-accent {
+  color: var(--primary);
+}
+
+.hero-subtitle {
+  font-size: clamp(16px, 4vw, 20px);
+  color: var(--text-muted);
+  max-width: 700px;
+  margin: 0 auto 30px auto;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  transition: opacity 0.2s;
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  padding: 60px 0;
+}
+
+.feature-card {
+  background: var(--card-bg);
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  transition: transform 0.2s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+}
+
+.feature-icon {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.feature-title {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-family: var(--syne);
+}
+
+.feature-text {
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.technical-section {
+  padding: 40px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-top: 20px;
+}
+
+.technical-title {
+  font-size: 28px;
+  margin: 0 0 20px 0;
+  font-family: var(--syne);
+}
+
+.technical-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.step-container {
+  display: grid;
+}
+
+.step-number {
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+}
+
+.step-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.step-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.welcome-footer {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}

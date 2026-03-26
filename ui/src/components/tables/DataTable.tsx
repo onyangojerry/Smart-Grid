@@ -14,11 +14,11 @@ type DataTableProps<T> = {
 
 export function DataTable<T>({ rows, columns, getRowKey }: DataTableProps<T>) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff" }}>
+    <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--card-bg)", color: "var(--text)" }}>
       <thead>
         <tr>
           {columns.map((col) => (
-            <th key={col.key} style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #ddd", fontSize: 13 }}>
+            <th key={col.key} style={{ textAlign: "left", padding: 10, borderBottom: "1px solid var(--border)", fontSize: 13, color: "var(--text-muted)" }}>
               {col.header}
             </th>
           ))}
@@ -28,7 +28,7 @@ export function DataTable<T>({ rows, columns, getRowKey }: DataTableProps<T>) {
         {rows.map((row) => (
           <tr key={getRowKey(row)}>
             {columns.map((col) => (
-              <td key={col.key} style={{ padding: 10, borderBottom: "1px solid #eee", fontSize: 14 }}>
+              <td key={col.key} style={{ padding: 10, borderBottom: "1px solid var(--border)", fontSize: 14 }}>
                 {col.render(row)}
               </td>
             ))}

@@ -8,6 +8,7 @@ import { Card } from "../../components/ui/Card";
 import { StatCard } from "../../components/ui/StatCard";
 import { ErrorBanner } from "../../components/ui/ErrorBanner";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
+import "../../styles/features.css";
 
 export function SavingsPage() {
   const { siteId } = useParams();
@@ -23,16 +24,16 @@ export function SavingsPage() {
 
   const data = query.data;
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div className="page-content">
       <PageHeader title="Savings" subtitle={siteId} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(160px,1fr))", gap: 8 }}>
+      <div className="stats-grid">
         <StatCard label="Baseline cost" value={data.baseline_cost} unit="USD" />
         <StatCard label="Optimized cost" value={data.optimized_cost} unit="USD" />
         <StatCard label="Savings amount" value={data.baseline_cost - data.optimized_cost} unit="USD" />
         <StatCard label="Savings %" value={data.savings_percent} unit="%" />
       </div>
       <Card title="Methodology">
-        <div style={{ color: "#666" }}>Computed from command effects and import price over requested window.</div>
+        <div style={{ color: "var(--text-muted)", fontSize: 14 }}>Computed from command effects and import price over requested window.</div>
       </Card>
     </div>
   );

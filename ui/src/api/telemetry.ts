@@ -17,3 +17,4 @@ export const getTelemetryHistory = (siteId: string, key: string, from: string, t
     `/api/v1/sites/${siteId}/telemetry/history`,
     { params: { key, from, to } }
   );
+

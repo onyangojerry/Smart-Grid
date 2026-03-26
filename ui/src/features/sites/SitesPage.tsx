@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { createSite, getSites } from "../../api/sites";
 import { queryKeys } from "../../api/queryKeys";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -11,6 +11,7 @@ import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { SiteForm } from "../../components/forms/SiteForm";
 import { DataTable } from "../../components/tables/DataTable";
 import { formatTimestamp } from "../../utils/time";
+import "../../styles/features.css";
 
 export function SitesPage() {
   const navigate = useNavigate();
@@ -32,8 +33,8 @@ export function SitesPage() {
 
   const rows = sitesQuery.data || [];
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <PageHeader title="Sites" right={<button onClick={() => setOpenCreate((v) => !v)}>{openCreate ? "Close" : "New site"}</button>} />
+    <div className="page-content">
+      <PageHeader title="Sites" right={<button onClick={() => setOpenCreate((v) => !v)} className="btn-icon">{openCreate ? "Close" : "New site"}</button>} />
       {openCreate ? (
         <Card title="Create site">
           <SiteForm onSubmit={(body) => createMutation.mutate(body)} loading={createMutation.isPending} />
@@ -47,7 +48,7 @@ export function SitesPage() {
             rows={rows}
             getRowKey={(r) => r.id}
             columns={[
-              { key: "name", header: "Name", render: (r) => <a href={`/sites/${r.id}`}>{r.name}</a> },
+              { key: "name", header: "Name", render: (r) => <Link to={`/sites/${r.id}`}>{r.name}</Link> },
               { key: "timezone", header: "Timezone", render: (r) => r.timezone },
               { key: "reserve", header: "Reserve SOC min", render: (r) => `${r.reserve_soc_min}%` },
               { key: "created", header: "Created", render: (r) => formatTimestamp(r.created_at) }

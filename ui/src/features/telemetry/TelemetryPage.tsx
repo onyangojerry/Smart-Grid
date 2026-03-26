@@ -9,6 +9,7 @@ import { ErrorBanner } from "../../components/ui/ErrorBanner";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { StatCard } from "../../components/ui/StatCard";
 import { TelemetryLineChart } from "../../components/charts/TelemetryLineChart";
+import "../../styles/features.css";
 
 export function TelemetryPage() {
   const { siteId } = useParams();
@@ -27,11 +28,11 @@ export function TelemetryPage() {
   if (latestQuery.isLoading) return <LoadingSpinner />;
   if (latestQuery.isError) {
     return (
-      <div style={{ display: "grid", gap: 12 }}>
+      <div className="page-content">
         <PageHeader title="Telemetry" subtitle={siteId} />
         <ErrorBanner error={latestQuery.error as Error} />
-        <Card title="DEFERRED">
-          <div style={{ color: "#ef6c00" }}>
+        <Card title="Status">
+          <div className="deferred-box">
             DEFERRED: GET /api/v1/sites/{"{site_id}"}/telemetry/latest and history endpoints are not implemented in the current backend.
           </div>
         </Card>
@@ -43,18 +44,18 @@ export function TelemetryPage() {
   const keys = Object.keys(latest);
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div className="page-content">
       <PageHeader title="Telemetry" subtitle={siteId} />
       <Card title="Latest values">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))", gap: 8 }}>
+        <div className="stats-grid">
           {Object.entries(latest).map(([key, point]) => (
             <StatCard key={key} label={key} value={point.value} unit={point.unit} ts={point.ts} quality={point.quality} />
           ))}
         </div>
       </Card>
       <Card title="History">
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
+        <div style={{ marginBottom: 10 }}>
+          <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)} className="form-input">
             {keys.map((k) => (
               <option key={k} value={k}>
                 {k}

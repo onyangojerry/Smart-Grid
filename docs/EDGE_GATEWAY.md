@@ -2,16 +2,16 @@
 # Edge Gateway
 
 ## Current state
-- Dedicated edge gateway runtime modules in repository: IMPLEMENTED under `src/energy_api/edge/`.
+- Dedicated edge gateway process in repository: NOT IMPLEMENTED.
 - Cloud-side control loop API exists in `src/energy_api/routers/control_loop.py`.
 
 ## Device adapter configuration
 - Device metadata persisted in `devices.metadata` JSONB.
-- Edge runtime includes command execution, reconciliation, replay, and observability modules.
+- No standalone edge adapter config loader module yet.
 
 ## Supported protocols (current)
 - Protocol field exists in schema (`devices.protocol`, default `modbus_tcp`).
-- Actual Modbus TCP adapter implementation: IMPLEMENTED in `src/energy_api/edge/modbus_adapter.py`.
+- Actual Modbus transport implementation: NOT IMPLEMENTED.
 - Actual MQTT client implementation: NOT IMPLEMENTED.
 
 ## Modbus register map format (current data model)
@@ -25,9 +25,8 @@
 - `word_order`
 
 ## Polling loop design
-- Edge polling cycle implementation: AVAILABLE in `src/energy_api/edge/poller.py`.
-- Edge staleness tracking: IMPLEMENTED in `src/energy_api/edge/staleness.py`.
-- Cloud staleness handling in state engine remains active as a second safety gate.
+- Edge polling loop service: NOT IMPLEMENTED.
+- Staleness handling currently occurs in cloud state engine using timestamp age check.
 
 ## Fail-safe mode behavior
 - Implemented in `RuleEngine.evaluate`:
@@ -46,18 +45,4 @@ Other topic handlers are NOT IMPLEMENTED:
 - `ems/{site_id}/alerts/device_fault`
 
 ## Local buffer schema and replay
-- Local SQLite buffer and replay logic: IMPLEMENTED in `src/energy_api/edge/storage/sqlite.py` and `src/energy_api/edge/replay.py`.
-
-## Startup recovery, safety, and observability
-- Startup recovery flow implemented in `src/energy_api/edge/runtime.py`:
-  1. initialize SQLite DB,
-  2. load unsynced telemetry,
-  3. load unresolved commands,
-  4. reconcile unresolved commands,
-  5. rebuild replay snapshot,
-  6. only then allow poll cycle execution.
-- Command execution + explicit reconciliation rules implemented in `src/energy_api/edge/commands.py` for `charge`, `discharge`, `idle`, `set_limit`, and `set_mode`.
-- Runtime observability implemented in `src/energy_api/edge/observability.py` (device health, poll latency, replay queue size, command backlog, errors, poll/sync timestamps).
-
-## Validation
-- Edge reliability and control tests are implemented under `tests/edge/`.
+- Local SQLite buffer and replay logic: NOT IMPLEMENTED.

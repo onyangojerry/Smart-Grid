@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { TOKEN_KEY } from "../../api/client";
-import { getMe, login } from "../../api/auth";
+import { getMe, login, signup } from "../../api/auth";
 import type { User } from "../../types";
 
 type AuthContextValue = {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isBootstrapping: boolean;
@@ -56,6 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       login: async (email: string, password: string) => {
         const result = await login({ email, password });
+        localStorage.setItem(TOKEN_KEY, result.access_token);
+        setToken(result.access_token);
+        const me = await getMe();
+        setUser(me);
+      },
+      signup: async (email: string, password: string, name?: string) => {
+        const result = await signup({ email, password, name });
         localStorage.setItem(TOKEN_KEY, result.access_token);
         setToken(result.access_token);
         const me = await getMe();

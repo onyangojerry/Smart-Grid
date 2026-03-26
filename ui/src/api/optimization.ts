@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { OptimizationRun, OptimizationRunBody } from "../types";
+import type { OptimizationRun, OptimizationRunBody, OptimizationRunDetail } from "../types";
 
 export const runOptimization = (siteId: string, body: OptimizationRunBody) =>
   apiFetch<OptimizationRun>(`/api/v1/sites/${siteId}/optimize/run`, {
@@ -13,4 +13,4 @@ export const getOptimizationRuns = async (siteId: string) => {
 };
 
 export const getOptimizationRunDetail = (runId: string) =>
-  apiFetch<OptimizationRun>(`/api/v1/optimization-runs/${runId}`);
+  apiFetch<OptimizationRunDetail>(`/api/v1/optimization-runs/${runId}`);
