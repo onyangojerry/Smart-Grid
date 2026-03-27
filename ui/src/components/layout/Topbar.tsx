@@ -12,7 +12,7 @@ export function Topbar() {
     <header className="topbar">
       <div className="topbar-left">
         <Link to="/" className="topbar-logo">
-          <span className="topbar-logo-icon">⚡</span>
+          {/* <span className="topbar-logo-icon">⚡</span> */}
           <strong className="topbar-logo-text">SmartGrid</strong>
         </Link>
       </div>

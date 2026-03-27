@@ -1,16 +1,19 @@
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../features/auth/useAuth";
 import { 
   Settings, LogOut, LayoutDashboard, MapPin, Cpu, 
-  Activity, Zap, Terminal, PiggyBank, PlayCircle 
+  Activity, Zap, Terminal, PiggyBank, PlayCircle, Bell, TrendingUp,
+  Users
 } from "lucide-react";
 
 export function Sidebar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const match = pathname.match(/^\/sites\/([^/]+)/);
   const siteId = match?.[1] || null;
+  const isAdmin = user?.role === "client_admin" || user?.role === "admin" || user?.role === "owner";
 
   const links = siteId
     ? [
@@ -21,7 +24,9 @@ export function Sidebar() {
         { to: `/sites/${siteId}/optimization`, label: "Optimization", icon: Zap },
         { to: `/sites/${siteId}/commands`, label: "Commands", icon: Terminal },
         { to: `/sites/${siteId}/savings`, label: "Savings", icon: PiggyBank },
-        { to: `/sites/${siteId}/simulation`, label: "Simulation", icon: PlayCircle }
+        { to: `/sites/${siteId}/simulation`, label: "Simulation", icon: PlayCircle },
+        { to: `/sites/${siteId}/alerts`, label: "Alerts", icon: Bell },
+        { to: `/sites/${siteId}/roi`, label: "ROI Calculator", icon: TrendingUp }
       ]
     : [{ to: "/sites", label: "Sites", icon: MapPin }];
 
@@ -56,9 +61,16 @@ export function Sidebar() {
           
           {showUserMenu && (
             <div className="sidebar-user-dropdown">
-              <button className="sidebar-dropdown-item" onClick={() => console.log("Settings")}>
+              <button className="sidebar-dropdown-item" onClick={() => navigate("/settings")}>
                 <Settings size={16} /> Settings
               </button>
+              {isAdmin && (
+                <>
+                  <button className="sidebar-dropdown-item" onClick={() => navigate("/admin/users")}>
+                    <Users size={16} /> User Management
+                  </button>
+                </>
+              )}
               <div className="sidebar-dropdown-divider" />
               <button className="sidebar-dropdown-item logout" onClick={logout}>
                 <LogOut size={16} /> Logout

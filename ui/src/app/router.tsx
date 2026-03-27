@@ -13,6 +13,10 @@ import { OptimizationPage } from "../features/optimization/OptimizationPage";
 import { CommandsPage } from "../features/commands/CommandsPage";
 import { SavingsPage } from "../features/savings/SavingsPage";
 import { SimulationPage } from "../features/simulation/SimulationPage";
+import { AlertsPage } from "../features/alerts/AlertsPage";
+import { ROIPage } from "../features/roi/ROIPage";
+import { SettingsPage } from "../features/settings/SettingsPage";
+import { UsersPage } from "../features/users/UsersPage";
 import { ErrorPage } from "../components/layout/ErrorPage";
 
 function HomeRoute() {
@@ -45,7 +49,11 @@ export const router = createBrowserRouter([
       { path: "sites/:siteId/optimization", element: <OptimizationPage /> },
       { path: "sites/:siteId/commands", element: <CommandsPage /> },
       { path: "sites/:siteId/savings", element: <SavingsPage /> },
-      { path: "sites/:siteId/simulation", element: <SimulationPage /> }
+      { path: "sites/:siteId/simulation", element: <SimulationPage /> },
+      { path: "sites/:siteId/alerts", element: <AlertsPage /> },
+      { path: "sites/:siteId/roi", element: <ROIPage /> },
+      { path: "settings", element: <SettingsPage /> },
+      { path: "admin/users", element: <UsersPage /> }
     ]
   }
 ]);

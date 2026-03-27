@@ -11,6 +11,7 @@
   --text-muted: #666666;
   --accent: #0d47a1;
   --success: #2e7d32;
+  --success-bg: #e8f5e9;
   --warning: #f57c00;
   --error: #d32f2f;
   --radius: 8px;
@@ -30,6 +31,7 @@
   --text-muted: #94a3b8;
   --accent: #38bdf8;
   --success: #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.15);
   --warning: #f59e0b;
   --error: #ef4444;
 }
@@ -46,6 +48,7 @@
   --text-muted: #9e9e9e;
   --accent: #ffb300;
   --success: #4caf50;
+  --success-bg: rgba(76, 175, 80, 0.15);
   --warning: #ff9800;
   --error: #f44336;
 }

@@ -7,14 +7,12 @@ import "../../styles/layout.css";
 export function AppShell() {
   return (
     <div className="app-shell">
-      <div className="main-content">
-        <Topbar />
-        <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-          <Sidebar />
-          <main className="page-container">
-            <Outlet />
-          </main>
-        </div>
+      <Topbar />
+      <div className="app-body">
+        <Sidebar />
+        <main className="page-container">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

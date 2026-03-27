@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core import configure_logging, load_settings
-from .routers import auth, control_loop
+from .routers import alerts, auth, control_loop, edge, roi, users
 
 app = FastAPI(
     title="Energy Allocation API",
@@ -32,6 +32,10 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(control_loop.router)
+app.include_router(alerts.router)
+app.include_router(edge.router)
+app.include_router(roi.router)
+app.include_router(users.router)
 
 
 @app.get("/health")

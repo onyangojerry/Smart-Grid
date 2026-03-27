@@ -13,6 +13,8 @@ from typing import Any
 import jwt
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from psycopg.types.json import Jsonb
 
 from energy_api.security import Principal, get_current_principal
 
@@ -370,3 +372,162 @@ def me(principal: Principal = Depends(get_current_principal)) -> dict[str, Any]:
 @router.post("/logout")
 def logout(_: Principal = Depends(get_current_principal)) -> dict[str, str]:
     return {"status": "ok"}
+
+
+class UserProfileUpdate(BaseModel):
+    full_name: str | None = None
+    timezone: str | None = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.patch("/me")
+def update_profile(
+    payload: dict[str, Any],
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, Any]:
+    user_id = principal.subject
+    allowed_fields = {"full_name", "timezone"}
+    updates = {k: v for k, v in payload.items() if k in allowed_fields and v is not None}
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+
+    set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
+    values = list(updates.values())
+    values.append(user_id)
+
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE users SET {set_clause} WHERE id::text = %s RETURNING id::text, email, full_name",
+                values,
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="User not found")
+            return {
+                "id": row[0],
+                "email": row[1],
+                "full_name": row[2],
+            }
+
+
+@router.post("/me/password")
+def change_password(
+    payload: dict[str, Any],
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, str]:
+    current_password = payload.get("current_password", "")
+    new_password = payload.get("new_password", "")
+
+    if not current_password or not new_password:
+        raise HTTPException(status_code=400, detail="Current and new passwords are required")
+
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+
+    user_id = principal.subject
+
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT password_hash FROM users WHERE id::text = %s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            current_hash = row[0]
+            if current_hash and not verify_password(current_password, current_hash):
+                raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+            new_hash = hash_password(new_password)
+            cur.execute(
+                "UPDATE users SET password_hash = %s WHERE id::text = %s",
+                (new_hash, user_id),
+            )
+
+    return {"status": "ok", "message": "Password changed successfully"}
+
+
+@router.get("/me/preferences")
+def get_preferences(
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, Any]:
+    user_id = principal.subject
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT preferences FROM user_preferences WHERE user_id::text = %s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                return row[0]
+            return {}
+
+
+@router.put("/me/preferences")
+def update_preferences(
+    payload: dict[str, Any],
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, Any]:
+    user_id = principal.subject
+
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO user_preferences(user_id, preferences)
+                VALUES (%s::uuid, %s)
+                ON CONFLICT (user_id) DO UPDATE SET preferences = %s
+                RETURNING preferences
+                """,
+                (user_id, Jsonb(payload), Jsonb(payload)),
+            )
+            row = cur.fetchone()
+            return row[0] if row else {}
+
+
+@router.get("/me/organization")
+def get_organization(
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, Any]:
+    user_id = principal.subject
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT o.id::text, o.name, o.legal_name, o.industry, o.timezone,
+                       m.role, o.created_at
+                FROM organizations o
+                JOIN user_memberships m ON m.organization_id = o.id
+                WHERE m.user_id::text = %s
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Organization not found")
+            return {
+                "id": row[0],
+                "name": row[1],
+                "legal_name": row[2],
+                "industry": row[3],
+                "timezone": row[4],
+                "role": row[5],
+                "created_at": row[6].isoformat() if row[6] else None,
+            }
+
+
+@router.get("/roles")
+def list_roles(
+    _: Principal = Depends(get_current_principal),
+) -> dict[str, list[str]]:
+    return {"roles": sorted(ALLOWED_ROLES)}

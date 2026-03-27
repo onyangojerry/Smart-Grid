@@ -1,6 +1,13 @@
 .app-shell {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -10,10 +17,14 @@
   display: flex;
   flex-direction: column;
   background: var(--card-bg);
+  height: calc(100vh - 56px);
+  flex-shrink: 0;
+  overflow-y: auto;
 }
 
 .sidebar-nav {
   flex: 1;
+  padding-right: 4px;
 }
 
 .nav-link {
@@ -168,6 +179,10 @@
   padding: 0 16px;
   background: var(--card-bg);
   width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  flex-shrink: 0;
 }
 
 .topbar-left {
@@ -347,14 +362,9 @@
   }
 }
 
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
 .page-container {
-  padding: 20px;
   flex: 1;
+  padding: 20px;
   overflow-y: auto;
+  height: calc(100vh - 56px);
 }

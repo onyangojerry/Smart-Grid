@@ -161,3 +161,120 @@ export type User = {
   role: string;
   organization_id: UUID;
 };
+
+export type AlertSeverity = "info" | "warning" | "critical";
+export type AlertState = "open" | "acknowledged" | "resolved";
+
+export type Alert = {
+  id: UUID;
+  site_id: UUID;
+  alert_type: string;
+  severity: AlertSeverity;
+  state: AlertState;
+  title: string;
+  message: string;
+  source_key: string | null;
+  threshold_value: number | null;
+  actual_value: number | null;
+  acknowledged_by: string | null;
+  acknowledged_at: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AlertCreateBody = {
+  alert_type: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  source_key?: string;
+  threshold_value?: number;
+  actual_value?: number;
+};
+
+export type AlertCount = {
+  site_id: string;
+  open: number;
+  by_severity: {
+    info: number;
+    warning: number;
+    critical: number;
+  };
+};
+
+export type ROIInputSystem = {
+  battery_capacity_kwh: number;
+  battery_power_kw: number;
+  solar_capacity_kwp: number;
+  round_trip_efficiency: number;
+};
+
+export type ROIInputFinancial = {
+  installation_cost: number;
+  annual_maintenance_cost: number;
+  electricity_import_price: number;
+  electricity_export_price: number;
+  annual_energy_import_kwh: number;
+  annual_energy_export_kwh: number;
+  annual_peak_demand_kw: number;
+  demand_charge_per_kw_month: number;
+};
+
+export type ROIInputUsage = {
+  self_consumption_ratio: number;
+  battery_cycles_per_year: number;
+  degradation_rate_year1: number;
+  degradation_rate_after: number;
+};
+
+export type ROIInputTimeline = {
+  project_lifespan_years: number;
+  discount_rate: number;
+  inflation_rate: number;
+};
+
+export type ROIInput = {
+  name: string;
+  description?: string;
+  system: ROIInputSystem;
+  financial: ROIInputFinancial;
+  usage: ROIInputUsage;
+  timeline: ROIInputTimeline;
+};
+
+export type ROIResult = {
+  annual_savings: number;
+  payback_years: number;
+  roi_percentage: number;
+  npv: number;
+  irr_percentage: number;
+  year_by_year: Array<{
+    year: number;
+    annual_savings: number;
+    cumulative_savings: number;
+    npv: number;
+    degradation_factor: number;
+    inflation_factor: number;
+    break_even: boolean;
+  }>;
+};
+
+export type ROIScenario = {
+  id: string;
+  site_id: string;
+  name: string;
+  description: string | null;
+  battery_capacity_kwh: number;
+  battery_power_kw: number;
+  solar_capacity_kwp: number;
+  installation_cost: number;
+  annual_savings: number | null;
+  payback_years: number | null;
+  roi_percentage: number | null;
+  npv: number | null;
+  irr_percentage: number | null;
+  created_at: string;
+  updated_at: string;
+};

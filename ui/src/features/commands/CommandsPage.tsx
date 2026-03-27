@@ -47,7 +47,7 @@ export function CommandsPage() {
           <>
             <ErrorBanner error={commandsQuery.error as Error} />
             <div className="deferred-box" style={{ marginTop: 16 }}>
-              DEFERRED: `GET /api/v1/sites/{site_id}/commands` is not implemented in current backend.
+              No commands found or error fetching for site {siteId}.
             </div>
           </>
         ) : (
