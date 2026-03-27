@@ -321,12 +321,12 @@ class ControlRepository:
                         """
                     )
 
-        if not self._table_exists("alerts"):
+        if not self._table_exists("control_alerts"):
             with self._connect() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        CREATE TABLE alerts (
+                        CREATE TABLE control_alerts (
                             id TEXT PRIMARY KEY,
                             site_id TEXT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
                             alert_type TEXT NOT NULL,
@@ -347,13 +347,13 @@ class ControlRepository:
                         """
                     )
                     cur.execute(
-                        "CREATE INDEX IF NOT EXISTS idx_alerts_site_state ON alerts(site_id, state, severity)"
+                        "CREATE INDEX IF NOT EXISTS idx_control_alerts_site_state ON control_alerts(site_id, state, severity)"
                     )
                     cur.execute(
-                        "CREATE INDEX IF NOT EXISTS idx_alerts_open ON alerts(site_id, severity, created_at DESC) WHERE state = 'open'"
+                        "CREATE INDEX IF NOT EXISTS idx_control_alerts_open ON control_alerts(site_id, severity, created_at DESC) WHERE state = 'open'"
                     )
                     cur.execute(
-                        "CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at DESC)"
+                        "CREATE INDEX IF NOT EXISTS idx_control_alerts_created ON control_alerts(created_at DESC)"
                     )
 
         if not self._table_exists("edge_gateways"):
@@ -992,7 +992,7 @@ class ControlRepository:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO alerts(
+                    INSERT INTO control_alerts(
                         id, site_id, alert_type, severity, state, title, message,
                         source_key, threshold_value, actual_value
                     ) VALUES (%s, %s, %s, %s, 'open', %s, %s, %s, %s, %s)
@@ -1015,7 +1015,7 @@ class ControlRepository:
     def list_alerts(self, site_id: str, state: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
         with self._connect() as conn:
             with conn.cursor() as cur:
-                query = "SELECT * FROM alerts WHERE site_id = %s"
+                query = "SELECT * FROM control_alerts WHERE site_id = %s"
                 params: list[Any] = [site_id]
                 if state:
                     query += " AND state = %s"
@@ -1028,7 +1028,7 @@ class ControlRepository:
     def get_alert(self, alert_id: str) -> dict[str, Any] | None:
         with self._connect() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT * FROM alerts WHERE id = %s", (alert_id,))
+                cur.execute("SELECT * FROM control_alerts WHERE id = %s", (alert_id,))
                 return cur.fetchone()
 
     def acknowledge_alert(self, alert_id: str, acknowledged_by: str) -> dict[str, Any] | None:
@@ -1036,7 +1036,7 @@ class ControlRepository:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    UPDATE alerts
+                    UPDATE control_alerts
                     SET state = 'acknowledged', acknowledged_by = %s, acknowledged_at = now()
                     WHERE id = %s AND state = 'open'
                     RETURNING *
@@ -1050,7 +1050,7 @@ class ControlRepository:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    UPDATE alerts
+                    UPDATE control_alerts
                     SET state = 'resolved', resolved_by = %s, resolved_at = now()
                     WHERE id = %s AND state IN ('open', 'acknowledged')
                     RETURNING *
@@ -1065,7 +1065,7 @@ class ControlRepository:
                 cur.execute(
                     """
                     SELECT severity, COUNT(*) as count
-                    FROM alerts
+                    FROM control_alerts
                     WHERE site_id = %s AND state = 'open'
                     GROUP BY severity
                     """,

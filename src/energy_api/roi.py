@@ -1,3 +1,5 @@
+# Author: Jerry Onyango
+# Contribution: Boots the FastAPI application, registers domain routers, and serves health and contract endpoints.
 from __future__ import annotations
 
 import os

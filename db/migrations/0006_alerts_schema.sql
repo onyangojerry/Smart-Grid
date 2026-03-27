@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS alerts (
+CREATE TABLE IF NOT EXISTS control_alerts (
     id TEXT PRIMARY KEY,
     site_id TEXT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
     alert_type TEXT NOT NULL,
@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS alerts (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_alerts_site_state ON alerts(site_id, state, severity);
-CREATE INDEX IF NOT EXISTS idx_alerts_open ON alerts(site_id, severity, created_at DESC) WHERE state = 'open';
-CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_control_alerts_site_state ON control_alerts(site_id, state, severity);
+CREATE INDEX IF NOT EXISTS idx_control_alerts_open ON control_alerts(site_id, severity, created_at DESC) WHERE state = 'open';
+CREATE INDEX IF NOT EXISTS idx_control_alerts_created ON control_alerts(created_at DESC);
 
 CREATE OR REPLACE FUNCTION update_alerts_updated_at()
 RETURNS TRIGGER AS $$
