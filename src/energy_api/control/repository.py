@@ -172,6 +172,19 @@ class ControlRepository:
                       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
                     );
 
+                    CREATE TABLE IF NOT EXISTS simulations (
+                      id TEXT PRIMARY KEY,
+                      site_id TEXT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+                      baseline_cost DOUBLE PRECISION NOT NULL,
+                      optimized_cost DOUBLE PRECISION NOT NULL,
+                      savings_percent DOUBLE PRECISION NOT NULL,
+                      battery_cycles DOUBLE PRECISION NOT NULL,
+                      self_consumption_percent DOUBLE PRECISION NOT NULL,
+                      peak_demand_reduction DOUBLE PRECISION NOT NULL,
+                      action_history JSONB NOT NULL,
+                      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+
                     CREATE INDEX IF NOT EXISTS idx_telemetry_points_stream_ts
                     ON telemetry_points(stream_id, ts DESC);
                     """
@@ -260,6 +273,39 @@ class ControlRepository:
                 cur.execute("SELECT * FROM sites WHERE id = %s", (site_id,))
                 return cur.fetchone()
 
+    def update_site(self, site_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        if not updates:
+            return self.get_site(site_id)
+        
+        allowed_keys = {"name", "timezone", "reserve_soc_min", "polling_interval_seconds"}
+        filtered_updates = {k: v for k, v in updates.items() if k in allowed_keys}
+        if not filtered_updates:
+            return self.get_site(site_id)
+
+        set_clause = ", ".join([f"{k} = %s" for k in filtered_updates.keys()])
+        values = list(filtered_updates.values())
+        values.append(site_id)
+
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"UPDATE sites SET {set_clause}, updated_at = now() WHERE id = %s RETURNING *",
+                    values
+                )
+                return cur.fetchone()
+
+    def list_devices(self, site_id: str) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM devices WHERE site_id = %s ORDER BY created_at ASC", (site_id,))
+                return cur.fetchall()
+
+    def get_device(self, site_id: str, device_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM devices WHERE site_id = %s AND id = %s", (site_id, device_id))
+                return cur.fetchone()
+
     def create_site(self, site_id: str, name: str, timezone: str, reserve_soc_min: float, polling_interval_seconds: int) -> dict[str, Any]:
         with self._connect() as conn:
             with conn.cursor() as cur:
@@ -303,6 +349,72 @@ class ControlRepository:
                     RETURNING *
                     """,
                     (device_id, site_id, device_type, protocol, Jsonb(metadata or {})),
+                )
+                return cur.fetchone()
+
+    def create_asset(self, site_id: str, asset_type: str, name: str) -> dict[str, Any]:
+        asset_id = self._id("ast")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO assets(id, site_id, asset_type, name)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING *
+                    """,
+                    (asset_id, site_id, asset_type, name),
+                )
+                return cur.fetchone()
+
+    def list_assets(self, site_id: str) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM assets WHERE site_id = %s ORDER BY created_at ASC", (site_id,))
+                return cur.fetchall()
+
+    def get_asset(self, asset_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM assets WHERE id = %s", (asset_id,))
+                return cur.fetchone()
+
+    def delete_asset(self, asset_id: str) -> bool:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM assets WHERE id = %s RETURNING id", (asset_id,))
+                return cur.fetchone() is not None
+
+    def create_asset_device(self, asset_id: str, device_type: str, protocol: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT site_id FROM assets WHERE id = %s", (asset_id,))
+                row = cur.fetchone()
+                if not row:
+                    raise ValueError("Asset not found")
+                site_id = row["site_id"]
+                
+                device_id = self._id("dev")
+                cur.execute(
+                    """
+                    INSERT INTO devices(id, site_id, asset_id, device_type, protocol, metadata)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING *
+                    """,
+                    (device_id, site_id, asset_id, device_type, protocol, Jsonb(metadata or {})),
+                )
+                return cur.fetchone()
+
+    def create_device_mapping(self, device_id: str, source_key: str, canonical_key: str, scale_factor: float = 1.0) -> dict[str, Any]:
+        mapping_id = self._id("map")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO point_mappings(id, device_id, source_key, canonical_key, scale_factor)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING *
+                    """,
+                    (mapping_id, device_id, source_key, canonical_key, scale_factor),
                 )
                 return cur.fetchone()
 
@@ -395,6 +507,22 @@ class ControlRepository:
                 )
                 rows = cur.fetchall()
         return {row["canonical_key"]: row for row in rows}
+
+    def get_telemetry_history(self, site_id: str, key: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT p.ts, p.value, p.unit, p.quality, s.canonical_key
+                    FROM telemetry_points p
+                    JOIN telemetry_streams s ON p.stream_id = s.id
+                    WHERE s.site_id = %s AND s.canonical_key = %s
+                      AND p.ts BETWEEN %s AND %s
+                    ORDER BY p.ts ASC
+                    """,
+                    (site_id, key, start, end),
+                )
+                return cur.fetchall()
 
     def get_last_sent_unacked_command(self, device_id: str, block_seconds: int) -> dict[str, Any] | None:
         with self._connect() as conn:
@@ -531,6 +659,12 @@ class ControlRepository:
                 )
                 return cur.fetchall()
 
+    def get_optimization_run(self, run_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM optimization_runs WHERE id = %s", (run_id,))
+                return cur.fetchone()
+
     def list_commands(self, site_id: str, start: datetime, end: datetime) -> list[dict[str, Any]]:
         with self._connect() as conn:
             with conn.cursor() as cur:
@@ -544,6 +678,19 @@ class ControlRepository:
                     """,
                     (site_id, start, end),
                 )
+                return cur.fetchall()
+
+    def list_commands_by_site(self, site_id: str, status: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                query = "SELECT * FROM commands WHERE site_id = %s"
+                params = [site_id]
+                if status:
+                    query += " AND status = %s"
+                    params.append(status)
+                query += " ORDER BY requested_at DESC LIMIT %s"
+                params.append(limit)
+                cur.execute(query, params)
                 return cur.fetchall()
 
     def average_import_price(self, site_id: str) -> float:
@@ -599,3 +746,44 @@ class ControlRepository:
                     ),
                 )
         return snapshot_id
+
+    def create_simulation(
+        self,
+        site_id: str,
+        baseline_cost: float,
+        optimized_cost: float,
+        savings_percent: float,
+        battery_cycles: float,
+        self_consumption_percent: float,
+        peak_demand_reduction: float,
+        action_history: list[dict[str, Any]],
+    ) -> str:
+        sim_id = self._id("sim")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO simulations(
+                      id, site_id, baseline_cost, optimized_cost, savings_percent,
+                      battery_cycles, self_consumption_percent, peak_demand_reduction, action_history
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        sim_id,
+                        site_id,
+                        baseline_cost,
+                        optimized_cost,
+                        savings_percent,
+                        battery_cycles,
+                        self_consumption_percent,
+                        peak_demand_reduction,
+                        Jsonb(action_history),
+                    ),
+                )
+        return sim_id
+
+    def get_simulation(self, sim_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM simulations WHERE id = %s", (sim_id,))
+                return cur.fetchone()

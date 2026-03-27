@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from energy_api.control import CommandDispatcher, ControlRepository, RuleEngine, StateEngine
@@ -16,6 +16,59 @@ from energy_api.savings import SavingsService
 from energy_api.simulation import SimulatedSite, run_simulation
 
 router = APIRouter(prefix="/api/v1", tags=["Control Loop"])
+
+
+@router.get("/sites/{site_id}/telemetry/latest")
+def get_telemetry_latest(
+    site_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> dict[str, dict[str, Any]]:
+    repo = ControlRepository()
+    rows = repo.get_latest_state_rows(site_id)
+    result = {}
+    for key, row in rows.items():
+        if row["ts"]:
+            quality = row["quality"]
+            if quality == "suspect":
+                quality = "estimated"
+            result[key] = {
+                "value": row["value"],
+                "unit": "kW",  # Defaulting to kW as standard in models
+                "ts": row["ts"].isoformat(),
+                "quality": quality,
+            }
+    return result
+
+
+@router.get("/sites/{site_id}/telemetry/history")
+def get_telemetry_history(
+    site_id: str,
+    key: str,
+    start: datetime = Query(..., alias="from"),
+    end: datetime = Query(..., alias="to"),
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> list[dict[str, Any]]:
+    repo = ControlRepository()
+    rows = repo.get_telemetry_history(site_id, key, start, end)
+    result = []
+    for row in rows:
+        quality = row["quality"]
+        if quality == "suspect":
+            quality = "estimated"
+        result.append(
+            {
+                "canonical_key": row["canonical_key"],
+                "ts": row["ts"].isoformat(),
+                "value": row["value"],
+                "unit": row["unit"] or "kW",
+                "quality": quality,
+            }
+        )
+    return result
 
 
 class TelemetryPointIn(BaseModel):
@@ -102,13 +155,54 @@ def create_site(
 @router.get("/sites/{site_id}")
 def get_site(
     site_id: str,
-    _principal: dict[str, Any] = Depends(require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")),
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
 ) -> dict[str, Any]:
     repo = ControlRepository()
     site = repo.get_site(site_id)
     if not site:
         raise HTTPException(status_code=404, detail="site not found")
     return site
+
+
+@router.patch("/sites/{site_id}")
+def patch_site(
+    site_id: str,
+    payload: dict[str, Any],
+    _principal: dict[str, Any] = Depends(require_roles("client_admin", "ops_admin")),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    updated = repo.update_site(site_id, payload)
+    if not updated:
+        raise HTTPException(status_code=404, detail="site not found")
+    return updated
+
+
+@router.get("/sites/{site_id}/devices")
+def list_site_devices(
+    site_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> list[dict[str, Any]]:
+    repo = ControlRepository()
+    return repo.list_devices(site_id)
+
+
+@router.get("/sites/{site_id}/devices/{device_id}")
+def get_site_device(
+    site_id: str,
+    device_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    device = repo.get_device(site_id, device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="device not found")
+    return device
 
 
 @router.post("/sites/{site_id}/devices", status_code=201)
@@ -126,6 +220,89 @@ def create_device(
         device_type=payload.device_type,
         protocol=payload.protocol,
         metadata=payload.metadata,
+    )
+
+
+@router.post("/sites/{site_id}/assets", status_code=201)
+def create_asset(
+    site_id: str,
+    payload: dict[str, Any],
+    _principal: dict[str, Any] = Depends(require_roles("client_admin", "ops_admin")),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    return repo.create_asset(
+        site_id=site_id,
+        asset_type=payload.get("asset_type", "other"),
+        name=payload.get("name", "New Asset"),
+    )
+
+
+@router.get("/sites/{site_id}/assets")
+def list_site_assets(
+    site_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> list[dict[str, Any]]:
+    repo = ControlRepository()
+    return repo.list_assets(site_id)
+
+
+@router.get("/assets/{asset_id}")
+def get_asset(
+    asset_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    asset = repo.get_asset(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="asset not found")
+    return asset
+
+
+@router.delete("/assets/{asset_id}")
+def delete_asset(
+    asset_id: str,
+    _principal: dict[str, Any] = Depends(require_roles("client_admin", "ops_admin")),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    if not repo.delete_asset(asset_id):
+        raise HTTPException(status_code=404, detail="asset not found")
+    return {"status": "ok"}
+
+
+@router.post("/assets/{asset_id}/devices", status_code=201)
+def create_asset_device(
+    asset_id: str,
+    payload: DeviceIn,
+    _principal: dict[str, Any] = Depends(require_roles("client_admin", "ops_admin")),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    try:
+        return repo.create_asset_device(
+            asset_id=asset_id,
+            device_type=payload.device_type,
+            protocol=payload.protocol,
+            metadata=payload.metadata,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/devices/{device_id}/mappings", status_code=201)
+def create_device_mapping(
+    device_id: str,
+    payload: dict[str, Any],
+    _principal: dict[str, Any] = Depends(require_roles("client_admin", "ops_admin")),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    return repo.create_device_mapping(
+        device_id=device_id,
+        source_key=payload.get("source_key", ""),
+        canonical_key=payload.get("canonical_key", ""),
+        scale_factor=float(payload.get("scale_factor", 1.0)),
     )
 
 
@@ -245,10 +422,38 @@ def optimize_run(
 def list_optimize_runs(
     site_id: str,
     limit: int = 50,
-    _principal: dict[str, Any] = Depends(require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")),
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
 ) -> dict[str, Any]:
     repo = ControlRepository()
     return {"items": repo.list_optimization_runs(site_id=site_id, limit=limit)}
+
+
+@router.get("/optimization-runs/{run_id}")
+def get_optimization_run_detail(
+    run_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    run = repo.get_optimization_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="optimization run not found")
+    return run
+
+
+@router.get("/sites/{site_id}/commands")
+def list_site_commands(
+    site_id: str,
+    status: str | None = Query(None),
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> list[dict[str, Any]]:
+    repo = ControlRepository()
+    return repo.list_commands_by_site(site_id, status)
 
 
 @router.post("/sites/{site_id}/commands")
@@ -302,6 +507,39 @@ def acknowledge_command(
     return repo.update_command_status(command_id, "acked")
 
 
+@router.get("/sites/{site_id}/dashboard")
+def get_site_dashboard(
+    site_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    state = StateEngine(repo).build_site_state(site_id)
+    policy = repo.get_active_policy(site_id)
+    commands = repo.list_commands_by_site(site_id, limit=5)
+    site = repo.get_site(site_id)
+
+    return {
+        "site": site,
+        "latest_state": {
+            "ts": state.ts.isoformat(),
+            "pv_kw": state.pv_kw,
+            "load_kw": state.load_kw,
+            "battery_soc": state.battery_soc,
+            "battery_power_kw": state.battery_power_kw,
+            "grid_import_kw": state.grid_import_kw,
+            "grid_export_kw": state.grid_export_kw,
+            "battery_temp_c": state.battery_temp_c,
+            "price_import": state.price_import,
+            "price_export": state.price_export,
+            "online": state.online,
+        },
+        "active_policy": policy,
+        "recent_commands": commands,
+    }
+
+
 @router.get("/sites/{site_id}/savings/summary")
 def savings_summary(
     site_id: str,
@@ -314,7 +552,10 @@ def savings_summary(
 @router.post("/sites/{site_id}/simulation/run")
 def run_site_simulation(
     site_id: str,
-    _principal: dict[str, Any] = Depends(require_roles("client_admin", "facility_manager", "energy_analyst", "ops_admin", "ml_engineer")),
+    payload: SimulationRunBody,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "ops_admin", "ml_engineer")
+    ),
 ) -> dict[str, Any]:
     # helper endpoint for local validation of simulation engine without DB coupling
     demand = [3.2, 3.5, 3.0, 2.8, 3.1, 3.7, 3.9, 4.0, 3.8, 3.4, 3.0, 2.9]
@@ -330,9 +571,24 @@ def run_site_simulation(
             solar_profile=solar,
             tariff_profile=tariff,
             initial_soc=50,
-        )
+        ),
+        step_minutes=payload.step_minutes or 5,
     )
+    
+    repo = ControlRepository()
+    sim_id = repo.create_simulation(
+        site_id=site_id,
+        baseline_cost=result.baseline_cost,
+        optimized_cost=result.optimized_cost,
+        savings_percent=result.savings_percent,
+        battery_cycles=result.battery_cycles,
+        self_consumption_percent=result.self_consumption_percent,
+        peak_demand_reduction=result.peak_demand_reduction,
+        action_history=result.action_history,
+    )
+
     return {
+        "id": sim_id,
         "site_id": site_id,
         "baseline_cost": result.baseline_cost,
         "optimized_cost": result.optimized_cost,
@@ -342,3 +598,20 @@ def run_site_simulation(
         "peak_demand_reduction": result.peak_demand_reduction,
         "action_history": result.action_history,
     }
+
+
+@router.get("/sites/{site_id}/simulation/{sim_id}")
+def get_simulation_detail(
+    site_id: str,
+    sim_id: str,
+    _principal: dict[str, Any] = Depends(
+        require_roles("client_admin", "facility_manager", "energy_analyst", "viewer", "ops_admin", "ml_engineer")
+    ),
+) -> dict[str, Any]:
+    repo = ControlRepository()
+    sim = repo.get_simulation(sim_id)
+    if not sim:
+        raise HTTPException(status_code=404, detail="simulation not found")
+    if sim["site_id"] != site_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return sim

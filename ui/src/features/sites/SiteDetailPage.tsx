@@ -95,13 +95,6 @@ export function SiteDetailPage() {
         </Card>
       </div>
 
-      {telemetryQuery.isError ? (
-        <Card title="DEFERRED">
-          <div style={{ color: "#ef6c00" }}>
-            DEFERRED: `/api/v1/sites/{siteId}/telemetry/latest` is not implemented in the current backend.
-          </div>
-        </Card>
-      ) : null}
     </div>
   );
 }

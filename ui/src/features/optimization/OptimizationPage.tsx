@@ -34,12 +34,14 @@ export function OptimizationPage() {
     mutationFn: ({ siteId, body }: { siteId: string; body: import("../../types").OptimizationRunBody }) =>
       runOptimization(siteId, body),
     onSuccess: (result) => {
-      setLatestResultId(result.optimization_run_id || result.id || null);
+      const runId = result.optimization_run_id || result.id || null;
+      setLatestResultId(runId);
       qc.invalidateQueries({ queryKey: queryKeys.optimizationRuns(siteId) });
       qc.invalidateQueries({ queryKey: queryKeys.telemetryLatest(siteId) });
       qc.invalidateQueries({ queryKey: queryKeys.commands(siteId) });
-      // Invalidate the detail query as well, so it refetches with the new latestResultId
-      qc.invalidateQueries({ queryKey: queryKeys.optimizationRunDetail(latestResultId!) });
+      if (runId) {
+        qc.invalidateQueries({ queryKey: queryKeys.optimizationRunDetail(runId) });
+      }
     }
   });
 

@@ -33,7 +33,7 @@ export function TelemetryPage() {
         <ErrorBanner error={latestQuery.error as Error} />
         <Card title="Status">
           <div className="deferred-box">
-            DEFERRED: GET /api/v1/sites/{"{site_id}"}/telemetry/latest and history endpoints are not implemented in the current backend.
+            Please ensure telemetry is being ingested for site {siteId} via /api/v1/telemetry/ingest.
           </div>
         </Card>
       </div>
