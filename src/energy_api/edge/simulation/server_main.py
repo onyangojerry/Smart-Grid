@@ -35,8 +35,15 @@ def run() -> None:
     device.set_holding_registers(6, _float32_to_regs(5.7))
     device.set_holding_registers(8, _float32_to_regs(0.0))
     device.set_holding_register(10, 255)
-    device.set_holding_registers(11, _float32_to_regs(0.24))
-    device.set_holding_registers(13, _float32_to_regs(0.08))
+    device.set_holding_register(14, 525)
+    device.set_holding_register(15, 105)
+    device.set_holding_register(16, 1)
+    device.set_holding_register(17, 0)
+    device.set_holding_register(18, 0)
+    device.set_holding_register(19, 1)
+    device.set_holding_register(20, 0)
+    device.set_holding_register(21, 50)
+    device.set_holding_register(22, 30)
 
     logger.info("simulated_modbus_server_started host=%s port=%s", host, port)
 

@@ -14,6 +14,7 @@ from .commands import CommandExecutor
 from .config import EdgeServiceSettings
 from .modbus_adapter import ModbusAdapter
 from .poller import EdgePoller
+from .profile_validation import validate_profile
 from .replay import ReplayService
 from .runtime import EdgeRuntime
 from .storage.sqlite import EdgeSQLiteStore
@@ -25,6 +26,16 @@ def run() -> None:
     log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
     configure_logging(level=log_level)
     logger = logging.getLogger("energy_api.edge.main")
+
+    profile_errors = validate_profile(settings.profile)
+    if profile_errors and settings.device_enabled:
+        logger.warning("edge_profile_validation_errors profile=%s errors=%s", settings.profile_name, profile_errors)
+        if settings.profile_name != "simulated_home_bess":
+            raise RuntimeError(f"Invalid profile configuration: {profile_errors}")
+
+    startup_errors = settings.startup_validation_errors()
+    if startup_errors:
+        raise RuntimeError(f"Invalid startup configuration: {startup_errors}")
 
     store = EdgeSQLiteStore(settings.sqlite_path)
     adapter = ModbusAdapter(
@@ -38,7 +49,13 @@ def run() -> None:
         polling_interval_seconds=settings.poll_interval_seconds,
         unit_id=settings.modbus_unit_id,
     )
-    command_executor = CommandExecutor(adapter=adapter, unit_id=settings.modbus_unit_id)
+    allow_writes = settings.device_enabled and (not settings.read_only_mode) and (not settings.observation_only_mode) and settings.profile.supports_writes
+    command_executor = CommandExecutor(
+        adapter=adapter,
+        unit_id=settings.modbus_unit_id,
+        profile=settings.profile,
+        allow_writes=allow_writes,
+    )
 
     cloud = EdgeCloudClient(
         base_url=settings.api_base_url,
@@ -79,7 +96,16 @@ def run() -> None:
     try:
         try:
             adapter.connect()
-            logger.info("edge_modbus_connected host=%s port=%s", settings.modbus_host, settings.modbus_port)
+            logger.info(
+                "edge_modbus_connected host=%s port=%s profile=%s unit_id=%s unit_id_source=%s profile_default_unit_id=%s write_enabled=%s",
+                settings.modbus_host,
+                settings.modbus_port,
+                settings.profile_name,
+                settings.modbus_unit_id,
+                settings.modbus_unit_id_source,
+                settings.profile_default_unit_id,
+                allow_writes,
+            )
         except Exception as exc:
             logger.warning("edge_modbus_connect_failed host=%s port=%s error=%s", settings.modbus_host, settings.modbus_port, exc)
 

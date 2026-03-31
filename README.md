@@ -10,6 +10,10 @@ The repository now treats the control-loop backend as canonical and retires the 
 - `docs/ARCHITECTURE.md`
 - `docs/CONTROL_LOGIC.md`
 - `docs/EDGE_GATEWAY.md`
+- `docs/DEVICE_PROFILES.md`
+- `docs/MODBUS_REGISTER_MAPS.md`
+- `docs/BATTERY_POLICY.md`
+- `docs/HARDWARE_INTEGRATION.md`
 - `docs/SIMULATION.md`
 - `docs/API.md`
 - `docs/AUTH.md`
@@ -59,7 +63,12 @@ energy-edge
 Common local environment variables for edge runtime:
 - `EDGE_SITE_ID` (default `site_001`)
 - `EDGE_GATEWAY_ID` (default `gw_edge_01`)
+- `EDGE_DEVICE_PROFILE` (`simulated_home_bess`, `victron_gx_home_bess`, `sma_sunspec_home_bess`)
+- `EDGE_PROFILE_REGISTER_MAP_PATH` (JSON register map file for vendor profiles)
+- `EDGE_DEVICE_ENABLED` / `EDGE_READ_ONLY_MODE` / `EDGE_OBSERVATION_ONLY_MODE`
 - `EDGE_MODBUS_HOST` / `EDGE_MODBUS_PORT` (default `127.0.0.1:15020`)
+- `EDGE_MODBUS_UNIT_ID` (optional explicit value; strict mismatch checks apply)
+- `EDGE_ALLOW_PROFILE_UNIT_ID_OVERRIDE` (default `false`; required when overriding profile default unit ID)
 - `EA_API_BASE_URL` (default `http://localhost:8000`)
 - `EDGE_API_BEARER_TOKEN` (optional bearer token for authenticated ingest)
 - `EDGE_SQLITE_PATH` (default `./data/edge/edge_runtime.db`)
@@ -79,6 +88,26 @@ Health/status visibility:
 - Runtime status snapshots are emitted in logs as `edge_runtime_status`.
 - Runtime status file is written to `EDGE_STATUS_FILE`.
 - Status includes service start, mode, active devices, last poll/replay times, command backlog, queue depth, and fault/degraded state.
+
+Hardware profile onboarding:
+1. Simulated: `EDGE_DEVICE_PROFILE=simulated_home_bess`
+2. Victron GX: `EDGE_DEVICE_PROFILE=victron_gx_home_bess` + `EDGE_PROFILE_REGISTER_MAP_PATH=/path/to/victron_registers.json`
+3. SMA SunSpec: `EDGE_DEVICE_PROFILE=sma_sunspec_home_bess` + `EDGE_PROFILE_REGISTER_MAP_PATH=/path/to/sma_sunspec_registers.json`
+4. Start with `EDGE_OBSERVATION_ONLY_MODE=true`, then disable after validation.
+
+Vendor notes:
+- Victron GX integrations should prefer Unit ID 100 unless commissioning requires override.
+- SMA register support is product-family specific; Modbus must be enabled on the target device.
+- Modbus TCP is a local/protected network interface and must not be exposed directly to the public internet.
+
+Configuration precedence and startup safety:
+1. Load selected profile from `EDGE_DEVICE_PROFILE` (+ optional `EDGE_PROFILE_REGISTER_MAP_PATH`).
+2. Resolve Unit ID from profile default.
+3. If `EDGE_MODBUS_UNIT_ID` is set:
+	- allowed when equal to profile default
+	- allowed when different only if `EDGE_ALLOW_PROFILE_UNIT_ID_OVERRIDE=true`
+	- otherwise startup fails fast with a clear mismatch error.
+4. Startup also fails fast on dangerous mode combinations (for example `EDGE_READ_ONLY_MODE=true` with `EDGE_OBSERVATION_ONLY_MODE=true`) and when write mode is requested for a read-only profile.
 
 ## Run UI locally
 ```bash

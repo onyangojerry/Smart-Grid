@@ -117,7 +117,17 @@ class DeviceIn(BaseModel):
 
 
 class CommandIn(BaseModel):
-    command_type: Literal["charge", "discharge", "idle", "set_limit", "set_mode"]
+    command_type: Literal[
+        "charge",
+        "discharge",
+        "idle",
+        "set_limit",
+        "set_mode",
+        "charge_setpoint_kw",
+        "discharge_setpoint_kw",
+        "set_grid_limit_kw",
+        "set_export_limit_kw",
+    ]
     target_power_kw: float | None = None
     target_soc: float | None = None
     reason: str

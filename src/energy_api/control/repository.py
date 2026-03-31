@@ -412,13 +412,21 @@ class ControlRepository:
                 )
 
                 canonical_keys = [
+                    "site_load_kw",
+                    "pv_generation_kw",
                     "pv_kw",
                     "load_kw",
                     "battery_soc",
                     "battery_power_kw",
                     "grid_import_kw",
                     "grid_export_kw",
+                    "battery_voltage_v",
+                    "battery_current_a",
                     "battery_temp_c",
+                    "inverter_mode",
+                    "alarm_code",
+                    "device_online",
+                    "device_fault",
                     "price_import",
                     "price_export",
                 ]

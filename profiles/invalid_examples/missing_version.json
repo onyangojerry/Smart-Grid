@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "vendor": "Victron",
+    "model_family": "GX Modbus-TCP Home BESS"
+  },
+  "register_points": [
+    {"canonical_key": "site_load_kw", "register_type": "input", "address": 820, "count": 2, "data_type": "float32", "poll_group": "fast", "critical": true}
+  ],
+  "command_points": [
+    {"canonical_command": "set_mode", "supported": true, "write_address": 16, "write_type": "holding", "value_encoding": "enum", "verify_address": 16, "verify_mode": "mode_equals", "tolerance": 0.0, "supports_readback": true}
+  ]
+}

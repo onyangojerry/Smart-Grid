@@ -99,6 +99,10 @@ class EdgeRuntimeSupervisor:
         return {
             "service_started_successfully": self.runtime._recovery_done,
             "runtime_mode": self.settings.runtime_mode,
+            "device_profile": self.settings.profile_name,
+            "device_enabled": self.settings.device_enabled,
+            "read_only_mode": self.settings.read_only_mode,
+            "observation_only_mode": self.settings.observation_only_mode,
             "site_id": self.settings.site_id,
             "gateway_id": self.settings.gateway_id,
             "active_devices_count": len(per_device_health),

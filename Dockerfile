@@ -10,6 +10,7 @@ COPY src /app/src
 COPY data /app/data
 COPY docs /app/docs
 COPY scripts /app/scripts
+COPY profiles /app/profiles
 
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -e .
 

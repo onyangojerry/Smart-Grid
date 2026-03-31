@@ -9,7 +9,17 @@ from datetime import datetime
 from typing import Literal
 
 
-ActionType = Literal["charge", "discharge", "idle", "set_limit", "set_mode"]
+ActionType = Literal[
+    "charge",
+    "discharge",
+    "idle",
+    "set_limit",
+    "set_mode",
+    "charge_setpoint_kw",
+    "discharge_setpoint_kw",
+    "set_grid_limit_kw",
+    "set_export_limit_kw",
+]
 
 
 @dataclass(frozen=True)

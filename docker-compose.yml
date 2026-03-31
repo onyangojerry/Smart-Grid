@@ -67,12 +67,18 @@ services:
       EDGE_RUNTIME_MODE: service
       EDGE_SITE_ID: site_001
       EDGE_GATEWAY_ID: gw_edge_01
+      EDGE_DEVICE_PROFILE: simulated_home_bess
+      EDGE_PROFILE_REGISTER_MAP_PATH:
+      EDGE_DEVICE_ENABLED: true
+      EDGE_READ_ONLY_MODE: false
+      EDGE_OBSERVATION_ONLY_MODE: false
       EDGE_SQLITE_PATH: /app/data/edge/edge_runtime.db
       EDGE_STATUS_FILE: /app/data/edge/status.json
       EA_API_BASE_URL: http://api:8000
       EDGE_API_BEARER_TOKEN: ${EDGE_API_BEARER_TOKEN:-}
       EDGE_MODBUS_HOST: modbus-sim
       EDGE_MODBUS_PORT: 15020
+      EDGE_ALLOW_PROFILE_UNIT_ID_OVERRIDE: false
       EDGE_POLL_INTERVAL_SECONDS: 5
       EDGE_COMMAND_INTERVAL_SECONDS: 5
       EDGE_STATUS_INTERVAL_SECONDS: 10

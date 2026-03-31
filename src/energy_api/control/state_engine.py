@@ -12,8 +12,8 @@ from .repository import ControlRepository
 
 class StateEngine:
     CRITICAL_KEYS = {
-        "pv_kw",
-        "load_kw",
+        "pv_generation_kw",
+        "site_load_kw",
         "battery_soc",
         "battery_power_kw",
         "grid_import_kw",
@@ -31,8 +31,27 @@ class StateEngine:
         stale_cutoff = datetime.now(UTC) - timedelta(seconds=polling_interval * 2)
         latest = self.repository.get_latest_state_rows(site_id)
 
+        aliases = {
+            "pv_generation_kw": ("pv_generation_kw", "pv_kw", "pv_generation"),
+            "site_load_kw": ("site_load_kw", "load_kw"),
+            "battery_soc": ("battery_soc",),
+            "battery_power_kw": ("battery_power_kw",),
+            "grid_import_kw": ("grid_import_kw",),
+            "grid_export_kw": ("grid_export_kw",),
+            "battery_temp_c": ("battery_temp_c",),
+            "price_import": ("price_import",),
+            "price_export": ("price_export",),
+        }
+
+        def _row(key: str) -> dict | None:
+            for alias in aliases.get(key, (key,)):
+                row = latest.get(alias)
+                if row is not None:
+                    return row
+            return None
+
         def _value(key: str, default: float = 0.0) -> float:
-            row = latest.get(key)
+            row = _row(key)
             if not row or row.get("value") is None:
                 return default
             return float(row["value"])
@@ -40,7 +59,7 @@ class StateEngine:
         online = True
         newest_ts: datetime | None = None
         for key in self.CRITICAL_KEYS:
-            row = latest.get(key)
+            row = _row(key)
             if not row or row.get("ts") is None:
                 online = False
                 continue
@@ -55,8 +74,8 @@ class StateEngine:
 
         return SiteState(
             ts=newest_ts,
-            pv_kw=_value("pv_kw"),
-            load_kw=_value("load_kw"),
+            pv_kw=_value("pv_generation_kw"),
+            load_kw=_value("site_load_kw"),
             battery_soc=_value("battery_soc"),
             battery_power_kw=_value("battery_power_kw"),
             grid_import_kw=_value("grid_import_kw"),

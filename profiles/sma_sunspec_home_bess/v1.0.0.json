@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "vendor": "SMA",
+    "model_family": "SunSpec Home BESS",
+    "version": "v1.0.0"
+  },
+  "description": "SMA SunSpec family profile using representative SunSpec-compatible points. Validate exact model blocks for deployed SMA product family.",
+  "source_of_truth": "SMA SunSpec Modbus documentation per device family",
+  "default_unit_id": 1,
+  "supports_writes": false,
+  "register_points": [
+    {"canonical_key": "site_load_kw", "register_type": "input", "address": 40183, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "pv_generation_kw", "register_type": "input", "address": 30775, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "battery_soc", "register_type": "input", "address": 30845, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "medium", "critical": true},
+    {"canonical_key": "battery_power_kw", "register_type": "input", "address": 30813, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "grid_import_kw", "register_type": "input", "address": 30795, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "grid_export_kw", "register_type": "input", "address": 30794, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "battery_voltage_v", "register_type": "input", "address": 30817, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "medium", "critical": false},
+    {"canonical_key": "battery_current_a", "register_type": "input", "address": 30821, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "medium", "critical": false},
+    {"canonical_key": "battery_temp_c", "register_type": "input", "address": 30825, "count": 2, "data_type": "float32", "scale_factor": 1.0, "poll_group": "medium", "critical": true},
+    {"canonical_key": "inverter_mode", "register_type": "input", "address": 40151, "count": 1, "data_type": "uint16", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "alarm_code", "register_type": "input", "address": 40191, "count": 1, "data_type": "uint16", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "device_fault", "register_type": "input", "address": 40192, "count": 1, "data_type": "uint16", "scale_factor": 1.0, "poll_group": "fast", "critical": true},
+    {"canonical_key": "device_online", "register_type": "input", "address": 40193, "count": 1, "data_type": "uint16", "scale_factor": 1.0, "poll_group": "medium", "critical": true}
+  ],
+  "command_points": [
+    {"canonical_command": "charge_setpoint_kw", "supported": false, "write_address": null, "write_type": "holding", "value_encoding": "signed_scale", "verify_address": null, "verify_mode": "observed_positive", "tolerance": 0.2, "supports_readback": false},
+    {"canonical_command": "discharge_setpoint_kw", "supported": false, "write_address": null, "write_type": "holding", "value_encoding": "signed_scale", "verify_address": null, "verify_mode": "observed_negative", "tolerance": 0.2, "supports_readback": false},
+    {"canonical_command": "idle", "supported": false, "write_address": null, "write_type": "holding", "value_encoding": "signed_scale", "verify_address": null, "verify_mode": "observed_near_zero", "tolerance": 0.2, "supports_readback": false},
+    {"canonical_command": "set_mode", "supported": false, "write_address": null, "write_type": "holding", "value_encoding": "enum", "verify_address": null, "verify_mode": "mode_equals", "tolerance": 0.0, "supports_readback": false},
+    {"canonical_command": "set_grid_limit_kw", "supported": false, "write_address": null, "write_type": "holding", "value_encoding": "signed_scale", "verify_address": null, "verify_mode": "readback_equals", "tolerance": 0.1, "supports_readback": false},
+    {"canonical_command": "set_export_limit_kw", "supported": false, "write_address": null, "write_type": "holding", "value_encoding": "signed_scale", "verify_address": null, "verify_mode": "readback_equals", "tolerance": 0.1, "supports_readback": false}
+  ]
+}

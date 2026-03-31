@@ -5,19 +5,45 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from .device_profiles import DeviceProfile
 from .modbus_adapter import ModbusAdapter, ModbusAdapterError
+from .types import CanonicalCommand, CommandPoint
 
 
-CommandType = Literal["charge", "discharge", "idle", "set_limit", "set_mode"]
+CommandType = Literal[
+    "charge",
+    "discharge",
+    "idle",
+    "set_limit",
+    "set_mode",
+    "charge_setpoint_kw",
+    "discharge_setpoint_kw",
+    "set_grid_limit_kw",
+    "set_export_limit_kw",
+]
 
 
 @dataclass
 class CommandExecutor:
     adapter: ModbusAdapter
     unit_id: int = 1
+    profile: DeviceProfile | None = None
+    allow_writes: bool = True
 
     def execute_and_reconcile(self, payload: dict[str, Any]) -> tuple[bool, str]:
         command_type = self._command_type(payload)
+        canonical = self._canonical_command(command_type)
+
+        if self.profile is not None:
+            point = self.profile.command_for(canonical)
+            if point is None:
+                return False, f"unsupported_command_for_profile:{canonical}"
+            if not point.supported:
+                return False, f"unsupported_command_for_profile:{canonical}"
+            if not self.allow_writes:
+                return False, "writes_disabled_read_only_mode"
+            self._apply_profile_command(point, payload)
+            return self._reconcile_profile_command(point, payload), f"reconciled_{point.verify_mode}"
 
         if command_type in {"charge", "discharge"}:
             self._apply_charge_discharge(command_type, payload)
@@ -43,6 +69,15 @@ class CommandExecutor:
 
     def reconcile_only(self, payload: dict[str, Any]) -> tuple[bool, str]:
         command_type = self._command_type(payload)
+        canonical = self._canonical_command(command_type)
+        if self.profile is not None:
+            point = self.profile.command_for(canonical)
+            if point is None:
+                return False, f"unsupported_command_for_profile:{canonical}"
+            if not point.supported:
+                return False, f"unsupported_command_for_profile:{canonical}"
+            return self._reconcile_profile_command(point, payload), f"reconcile_only_{point.verify_mode}"
+
         if command_type in {"charge", "discharge"}:
             return self._reconcile_charge_discharge(command_type, payload), "reconcile_only_power_or_setpoint"
         if command_type == "idle":
@@ -52,6 +87,67 @@ class CommandExecutor:
         if command_type == "set_mode":
             return self._reconcile_set_mode(payload), "reconcile_only_mode_readback"
         return False, "unsupported_command"
+
+    def _apply_profile_command(self, point: CommandPoint, payload: dict[str, Any]) -> None:
+        if point.write_address is None:
+            raise ModbusAdapterError("invalid_profile_command", f"missing_write_address:{point.canonical_command}")
+        value = self._command_value(point, payload)
+        encoded = self._encode_value(point, value, payload)
+        self.adapter.write_single_register(point.write_address, encoded, unit_id=self.unit_id)
+
+    def _reconcile_profile_command(self, point: CommandPoint, payload: dict[str, Any]) -> bool:
+        verify_address = point.verify_address if point.verify_address is not None else point.write_address
+        if verify_address is None:
+            return False
+
+        if point.verify_mode == "readback_equals":
+            if not point.supports_readback:
+                return False
+            expected = self._encode_value(point, self._command_value(point, payload), payload) & 0xFFFF
+            actual = self.adapter.read_holding_registers(verify_address, 1, unit_id=self.unit_id)[0] & 0xFFFF
+            return actual == expected
+
+        if point.verify_mode == "mode_equals":
+            target_mode = int(payload.get("target_mode", payload.get("target_value", 0))) & 0xFFFF
+            actual = self.adapter.read_holding_registers(verify_address, 1, unit_id=self.unit_id)[0] & 0xFFFF
+            return actual == target_mode
+
+        scale = float(payload.get("setpoint_scale", 10.0))
+        power_raw = self.adapter.read_holding_registers(verify_address, 1, unit_id=self.unit_id)[0]
+        power_kw = self._decode_int16(power_raw) / scale
+
+        if point.verify_mode == "observed_positive":
+            return power_kw >= max(0.0, point.tolerance)
+        if point.verify_mode == "observed_negative":
+            return power_kw <= -max(0.0, point.tolerance)
+        if point.verify_mode == "observed_near_zero":
+            return abs(power_kw) <= max(0.0, point.tolerance)
+
+        return False
+
+    @staticmethod
+    def _command_value(point: CommandPoint, payload: dict[str, Any]) -> float:
+        if point.canonical_command == "idle":
+            return 0.0
+        if point.canonical_command in {"charge_setpoint_kw", "discharge_setpoint_kw", "set_grid_limit_kw", "set_export_limit_kw"}:
+            return float(payload.get("target_power_kw", payload.get("target_limit", payload.get("target_kw", 0.0))))
+        if point.canonical_command == "set_mode":
+            return float(payload.get("target_mode", payload.get("target_value", 0)))
+        return 0.0
+
+    @staticmethod
+    def _encode_value(point: CommandPoint, value: float, payload: dict[str, Any]) -> int:
+        if point.value_encoding == "enum":
+            return int(round(value)) & 0xFFFF
+        if point.value_encoding == "uint16":
+            return max(0, int(round(value))) & 0xFFFF
+        scale = float(payload.get("setpoint_scale", 10.0))
+        signed_value = int(round(value * scale))
+        if point.canonical_command == "discharge_setpoint_kw":
+            signed_value = -abs(signed_value)
+        if point.canonical_command == "charge_setpoint_kw":
+            signed_value = abs(signed_value)
+        return signed_value & 0xFFFF
 
     def _apply_charge_discharge(self, command_type: CommandType, payload: dict[str, Any]) -> None:
         register_address = int(payload["setpoint_register"])
@@ -121,10 +217,35 @@ class CommandExecutor:
     @staticmethod
     def _command_type(payload: dict[str, Any]) -> CommandType:
         value = str(payload.get("command_type", "")).strip()
-        allowed = {"charge", "discharge", "idle", "set_limit", "set_mode"}
+        allowed = {
+            "charge",
+            "discharge",
+            "idle",
+            "set_limit",
+            "set_mode",
+            "charge_setpoint_kw",
+            "discharge_setpoint_kw",
+            "set_grid_limit_kw",
+            "set_export_limit_kw",
+        }
         if value not in allowed:
             raise ModbusAdapterError("invalid_command", f"Unsupported command_type={value}")
         return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _canonical_command(command_type: CommandType) -> CanonicalCommand:
+        aliases: dict[str, CanonicalCommand] = {
+            "charge": "charge_setpoint_kw",
+            "discharge": "discharge_setpoint_kw",
+            "idle": "idle",
+            "set_limit": "set_grid_limit_kw",
+            "set_mode": "set_mode",
+            "charge_setpoint_kw": "charge_setpoint_kw",
+            "discharge_setpoint_kw": "discharge_setpoint_kw",
+            "set_grid_limit_kw": "set_grid_limit_kw",
+            "set_export_limit_kw": "set_export_limit_kw",
+        }
+        return aliases[str(command_type)]
 
     @staticmethod
     def _decode_int16(value: int) -> int:

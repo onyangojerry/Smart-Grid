@@ -121,7 +121,17 @@ class EdgeRuntime:
         payload: dict,
         idempotency_key: str | None = None,
     ) -> dict:
-        if payload.get("command_type") not in {"charge", "discharge", "idle", "set_limit", "set_mode"}:
+        if payload.get("command_type") not in {
+            "charge",
+            "discharge",
+            "idle",
+            "set_limit",
+            "set_mode",
+            "charge_setpoint_kw",
+            "discharge_setpoint_kw",
+            "set_grid_limit_kw",
+            "set_export_limit_kw",
+        }:
             raise ValueError("invalid command_type")
 
         existing = self.store.get_command(command_id=command_id)
