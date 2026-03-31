@@ -3,6 +3,8 @@
 
 ## Auth
 - `/api/v1/*` endpoints use JWT role checks via `require_roles`.
+- `/api/v1/*` endpoints also accept service keys via `X-API-Key` (resolved from `EA_SERVICE_KEYS`).
+- Edge runtime precedence: `EDGE_API_KEY` (`X-API-Key`) is primary; bearer is used only if API key is absent.
 - Login endpoint: `POST /api/v1/auth/login`.
 - Current user endpoint: `GET /api/v1/auth/me`.
 - Logout endpoint: `POST /api/v1/auth/logout`.
@@ -12,6 +14,7 @@
 
 ### POST /api/v1/telemetry/ingest
 - Auth: `client_admin | facility_manager | ops_admin | ml_engineer`
+- Accepted auth transport: JWT bearer or `X-API-Key` service key
 - Request:
 ```json
 {
@@ -66,6 +69,8 @@
 
 ### GET /api/v1/sites/{site_id}/savings/summary
 - Auth: `client_admin | facility_manager | energy_analyst | viewer | ops_admin`
+- Command taxonomy normalization in reporting supports legacy and modern command names (`charge`, `charge_setpoint_kw`, `discharge`, `discharge_setpoint_kw`, `idle`, `set_mode`, `set_limit`, `set_grid_limit_kw`, `set_export_limit_kw`).
+- v1 economics model: charge/discharge are economically modeled; `idle`, `set_mode`, and grid/export limit commands are reported in taxonomy counts and treated as baseline-neutral.
 - Response:
 ```json
 {

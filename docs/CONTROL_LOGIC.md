@@ -30,8 +30,10 @@ For each candidate action, score terms are computed in `RuleEngine._score`:
 Total score is sum of all terms via `ScoreBreakdown.total`.
 
 ## Action set
-- Implemented command types: `charge`, `discharge`, `idle`, `set_limit`, `set_mode`.
+- Implemented canonical command types: `charge_setpoint_kw`, `discharge_setpoint_kw`, `idle`, `set_mode`, `set_grid_limit_kw`, `set_export_limit_kw`.
+- Legacy aliases still accepted in execution paths for compatibility: `charge`, `discharge`, `set_limit`.
 - Direct power targets are accepted by `/api/v1/sites/{site_id}/commands`.
+- Savings/reporting v1 mapping: charge/discharge groups are economically modeled; `idle`, `set_mode`, and grid/export limit groups are baseline-neutral but counted in taxonomy reporting.
 
 ## Hard constraints before dispatch
 - Safe mode when `online=False`.

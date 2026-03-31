@@ -61,6 +61,7 @@ def run() -> None:
         base_url=settings.api_base_url,
         timeout_seconds=settings.api_timeout_seconds,
         bearer_token=settings.api_bearer_token,
+        api_key=settings.api_key,
     )
     replay = ReplayService(
         store=store,

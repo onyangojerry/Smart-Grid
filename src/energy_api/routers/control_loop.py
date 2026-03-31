@@ -4,6 +4,7 @@
 # /Users/loan/Desktop/energyallocation/src/energy_api/routers/control_loop.py
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Any, Literal
 
@@ -11,11 +12,12 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from energy_api.control import CommandDispatcher, ControlRepository, RuleEngine, StateEngine
-from energy_api.security import require_roles
+from energy_api.security import Principal, require_roles
 from energy_api.savings import SavingsService
 from energy_api.simulation import SimulatedSite, run_simulation
 
 router = APIRouter(prefix="/api/v1", tags=["Control Loop"])
+logger = logging.getLogger("energy_api.routers.control_loop")
 
 
 @router.get("/sites/{site_id}/telemetry/latest")
@@ -327,8 +329,16 @@ def create_device_mapping(
 @router.post("/telemetry/ingest")
 def ingest_telemetry(
     payload: TelemetryBatchIn,
-    _principal: dict[str, Any] = Depends(require_roles("client_admin", "facility_manager", "ops_admin", "ml_engineer")),
+    principal: Principal = Depends(require_roles("client_admin", "facility_manager", "ops_admin", "ml_engineer")),
 ) -> dict[str, Any]:
+    logger.info(
+        "telemetry_ingest_received auth_type=%s subject=%s site_id=%s gateway_id=%s points=%s",
+        principal.token_type,
+        principal.subject,
+        payload.site_id,
+        payload.gateway_id,
+        len(payload.points),
+    )
     repo = ControlRepository()
     repo.upsert_site_defaults(payload.site_id)
 
@@ -337,6 +347,13 @@ def ingest_telemetry(
 
     missing = sorted({key for key in keys if key not in stream_map})
     if missing:
+        logger.warning(
+            "telemetry_ingest_rejected_missing_streams auth_type=%s subject=%s site_id=%s missing=%s",
+            principal.token_type,
+            principal.subject,
+            payload.site_id,
+            missing,
+        )
         raise HTTPException(status_code=400, detail={"missing_streams": missing})
 
     rows = []
@@ -353,13 +370,24 @@ def ingest_telemetry(
         )
 
     inserted = repo.insert_telemetry_points(rows)
-    return {
+    response = {
         "site_id": payload.site_id,
         "gateway_id": payload.gateway_id,
         "received": len(payload.points),
         "inserted": inserted,
         "deduplicated": len(payload.points) - inserted,
     }
+    logger.info(
+        "telemetry_ingest_accepted auth_type=%s subject=%s site_id=%s gateway_id=%s received=%s inserted=%s deduplicated=%s",
+        principal.token_type,
+        principal.subject,
+        payload.site_id,
+        payload.gateway_id,
+        response["received"],
+        response["inserted"],
+        response["deduplicated"],
+    )
+    return response
 
 
 @router.post("/sites/{site_id}/optimize/run")

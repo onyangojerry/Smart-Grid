@@ -57,4 +57,5 @@ Other runtime topic handlers remain pending for production messaging:
 ## Local buffer schema and replay
 - Local SQLite buffer and replay logic are implemented in `src/energy_api/edge/storage/sqlite.py` and `src/energy_api/edge/replay.py`.
 - SQLite runtime state is persisted for service restarts and startup recovery.
-- Remaining work is operational validation under prolonged outages and production token provisioning strategy.
+- Compose/local ingest auth is wired via service keys (`EDGE_API_KEY` -> `X-API-Key`, validated against `EA_SERVICE_KEYS`).
+- Remaining work is operational validation under prolonged outages.
