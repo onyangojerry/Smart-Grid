@@ -120,4 +120,11 @@ class BatteryPolicyEngine:
             },
             "summary": reason,
         }
-        return ScoredAction(action_type=action_type, target_power_kw=target_power_kw, score=score, explanation=explanation, reason=reason)
+        return ScoredAction(
+            action_type=action_type,
+            target_power_kw=target_power_kw,
+            score=score,
+            explanation=explanation,
+            reason=reason,
+            economic_class=ScoredAction.classify_economic_intent(action_type),  # v2 Reporting extension point
+        )

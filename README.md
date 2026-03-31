@@ -17,6 +17,7 @@ The repository now treats the control-loop backend as canonical and retires the 
 - `docs/SIMULATION.md`
 - `docs/API.md`
 - `docs/AUTH.md`
+- `docs/EDGE_RESILIENCE.md` (failure classification, backoff strategy, v2 reporting prep)
 - `docs/data-engineering.md`
 - `docs/MIGRATION_NOTES.md`
 
@@ -70,8 +71,10 @@ Common local environment variables for edge runtime:
 - `EDGE_MODBUS_UNIT_ID` (optional explicit value; strict mismatch checks apply)
 - `EDGE_ALLOW_PROFILE_UNIT_ID_OVERRIDE` (default `false`; required when overriding profile default unit ID)
 - `EA_API_BASE_URL` (default `http://localhost:8000`)
-- `EDGE_API_KEY` (preferred for service-to-service ingest auth via `X-API-Key`)
-- `EDGE_API_BEARER_TOKEN` (optional JWT bearer token for ingest auth)
+- `EDGE_API_KEY` (preferred for service-to-service ingest auth via `X-API-Key`; takes precedence over bearer token)
+- `EDGE_API_BEARER_TOKEN` (optional JWT bearer token for ingest auth; fallback if API key absent)
+  - **Note:** API key has deterministic precedence. If both are set, only X-API-Key is sent.
+  - Auth failures (401/403) do NOT retry automatically; check logs for `failure_class=auth_failure`
 - `EDGE_SQLITE_PATH` (default `./data/edge/edge_runtime.db`)
 - `EDGE_STATUS_FILE` (default `./data/edge/status.json`)
 
