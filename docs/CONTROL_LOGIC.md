@@ -33,6 +33,7 @@ Total score is sum of all terms via `ScoreBreakdown.total`.
 - Implemented canonical command types: `charge_setpoint_kw`, `discharge_setpoint_kw`, `idle`, `set_mode`, `set_grid_limit_kw`, `set_export_limit_kw`.
 - Legacy aliases still accepted in execution paths for compatibility: `charge`, `discharge`, `set_limit`.
 - Direct power targets are accepted by `/api/v1/sites/{site_id}/commands`.
+- Manual command requests construct an explicit operator-intent action and do not reuse optimization scoring or site-state evaluation.
 - Savings/reporting v1 mapping: charge/discharge groups are economically modeled; `idle`, `set_mode`, and grid/export limit groups are baseline-neutral but counted in taxonomy reporting.
 
 ## Hard constraints before dispatch
@@ -52,4 +53,4 @@ Total score is sum of all terms via `ScoreBreakdown.total`.
   "summary": "Discharging battery to reduce expensive grid imports while protecting reserve."
 }
 ```
-Explanation is produced inside `RuleEngine.evaluate` before dispatcher call.
+Explanation is produced inside `RuleEngine.evaluate` for optimization runs; manual commands emit an operator-only explanation payload.

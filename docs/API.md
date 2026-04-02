@@ -15,6 +15,7 @@
 ### POST /api/v1/telemetry/ingest
 - Auth: `client_admin | facility_manager | ops_admin | ml_engineer`
 - Accepted auth transport: JWT bearer or `X-API-Key` service key
+- Telemetry units are resolved per canonical key; fields like SOC, temperature, voltage/current, and price do not default to `kW`.
 - Request:
 ```json
 {
@@ -44,6 +45,7 @@
 ```json
 {"command_type":"charge","target_power_kw":2.0,"target_soc":75,"reason":"manual_override","idempotency_key":"cmd-001"}
 ```
+- Manual commands are recorded as operator intent and do not reuse optimization scoring or state evaluation.
 - Response fields: `status`, `command`, `transport`, `retries`.
 
 ### GET /api/v1/sites

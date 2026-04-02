@@ -20,6 +20,7 @@ Current control-loop runtime persists:
 - Dedupe protection for telemetry points on `(stream_id, ts)`.
 - Command idempotency support via `(site_id, idempotency_key)` uniqueness.
 - Time-series index for telemetry query efficiency.
+- The control repository no longer creates tables at runtime; schema presence is validated against the migration-managed database before use.
 
 ## Migration strategy
 - Keep migrations append-only.

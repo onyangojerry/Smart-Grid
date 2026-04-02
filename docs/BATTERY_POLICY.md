@@ -17,8 +17,8 @@ Always block control actions when:
 Implemented protections:
 
 - SOC reserve and SOC max boundaries
-- direction-change gap (anti-thrashing)
-- minimum action window via policy timing fields
+- direction-change gap blocks reversals only; same-direction continuation is allowed
+- minimum action window via policy timing fields keeps the current direction active until the window elapses
 - temperature derating above derate threshold
 - power cap enforcement
 

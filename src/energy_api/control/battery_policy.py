@@ -29,7 +29,7 @@ class BatteryPolicyConfig:
 
 class BatteryPolicyEngine:
     def __init__(self) -> None:
-        self._last_action: str = "idle"
+        self._last_action_type: str = "idle"
         self._last_action_ts: datetime | None = None
 
     def decide(
@@ -45,25 +45,35 @@ class BatteryPolicyEngine:
         if config.unresolved_critical_command:
             return self._result("idle", 0.0, "unresolved_command_block", state, tariff)
 
-        direction_locked = self._direction_lock_active(now, config.minimum_direction_change_gap)
-        if direction_locked:
-            return self._result("idle", 0.0, "direction_change_gap", state, tariff)
+        elapsed_seconds = self._elapsed_seconds(now)
+        last_direction = self._action_direction(self._last_action_type)
+        if elapsed_seconds is not None and elapsed_seconds < config.minimum_action_duration:
+            return self._continue_last_direction(state, tariff, config, last_direction)
 
         if state.pv_kw > state.load_kw and state.battery_soc < config.soc_max:
             pv_surplus = max(0.0, state.pv_kw - state.load_kw)
             target = min(self._derated_limit(state, config), pv_surplus)
             if target > 0.0:
-                return self._result("charge_setpoint_kw", target, "pv_surplus_charge", state, tariff)
+                candidate = self._result("charge_setpoint_kw", target, "pv_surplus_charge", state, tariff)
+                if self._direction_change_blocked(last_direction, candidate.action_type, elapsed_seconds, config.minimum_direction_change_gap):
+                    return self._result("idle", 0.0, "direction_change_gap", state, tariff)
+                return candidate
 
         if tariff.is_peak and state.battery_soc > config.soc_reserve_normal:
             target = min(self._derated_limit(state, config), max(0.0, state.load_kw))
             if target > 0.0:
-                return self._result("discharge_setpoint_kw", target, "peak_discharge", state, tariff)
+                candidate = self._result("discharge_setpoint_kw", target, "peak_discharge", state, tariff)
+                if self._direction_change_blocked(last_direction, candidate.action_type, elapsed_seconds, config.minimum_direction_change_gap):
+                    return self._result("idle", 0.0, "direction_change_gap", state, tariff)
+                return candidate
 
         if (not tariff.is_peak) and (tariff.import_price <= 0.12) and state.battery_soc < config.soc_target_offpeak:
             target = min(self._derated_limit(state, config), max(0.0, config.soc_target_offpeak - state.battery_soc) / 10.0)
             if target > 0.0:
-                return self._result("charge_setpoint_kw", target, "offpeak_charge", state, tariff)
+                candidate = self._result("charge_setpoint_kw", target, "offpeak_charge", state, tariff)
+                if self._direction_change_blocked(last_direction, candidate.action_type, elapsed_seconds, config.minimum_direction_change_gap):
+                    return self._result("idle", 0.0, "direction_change_gap", state, tariff)
+                return candidate
 
         if state.battery_soc <= config.soc_reserve_hard:
             return self._result("idle", 0.0, "soc_reserve_protection", state, tariff)
@@ -85,10 +95,35 @@ class BatteryPolicyEngine:
             return True
         return False
 
-    def _direction_lock_active(self, now: datetime, min_gap_seconds: int) -> bool:
+    def _elapsed_seconds(self, now: datetime) -> float | None:
         if self._last_action_ts is None:
+            return None
+        return max(0.0, (now - self._last_action_ts).total_seconds())
+
+    @staticmethod
+    def _action_direction(action_type: str) -> str:
+        if "discharge" in action_type:
+            return "discharge"
+        if "charge" in action_type:
+            return "charge"
+        return "idle"
+
+    def _direction_change_blocked(self, last_direction: str, candidate_action_type: str, elapsed_seconds: float | None, min_gap_seconds: int) -> bool:
+        candidate_direction = self._action_direction(candidate_action_type)
+        if last_direction == "idle" or candidate_direction == last_direction:
             return False
-        return now < self._last_action_ts + timedelta(seconds=max(0, min_gap_seconds))
+        if elapsed_seconds is None:
+            return False
+        return elapsed_seconds < max(0, min_gap_seconds)
+
+    def _continue_last_direction(self, state: SiteState, tariff: TariffState, config: BatteryPolicyConfig, last_direction: str) -> ScoredAction:
+        if last_direction == "charge":
+            target = min(self._derated_limit(state, config), max(0.0, state.pv_kw - state.load_kw))
+            return self._result("charge_setpoint_kw", target, "minimum_action_duration", state, tariff)
+        if last_direction == "discharge":
+            target = min(self._derated_limit(state, config), max(0.0, state.load_kw))
+            return self._result("discharge_setpoint_kw", target, "minimum_action_duration", state, tariff)
+        return self._result("idle", 0.0, "minimum_action_duration", state, tariff)
 
     @staticmethod
     def _derated_limit(state: SiteState, config: BatteryPolicyConfig) -> float:
@@ -99,7 +134,7 @@ class BatteryPolicyEngine:
         return max(0.3, config.battery_power_limit_kw * (1.0 - reduction))
 
     def _result(self, action_type: str, target_power_kw: float, reason: str, state: SiteState, tariff: TariffState) -> ScoredAction:
-        self._last_action = action_type
+        self._last_action_type = action_type
         self._last_action_ts = datetime.now(UTC)
         score = ScoreBreakdown(
             energy_cost=round(max(0.0, state.load_kw - state.pv_kw) * max(0.0, tariff.import_price), 6),
