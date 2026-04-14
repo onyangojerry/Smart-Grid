@@ -1,9 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import { getOptimizationRuns } from "../../api/optimization";
-import { getSavingsSummary } from "../../api/savings";
-import { getTelemetryLatest } from "../../api/telemetry";
+import { getSiteDashboard } from "../../api/sites";
 import { queryKeys } from "../../api/queryKeys";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Card } from "../../components/ui/Card";
@@ -18,56 +16,55 @@ export function SiteDetailPage() {
   const { siteId } = useParams();
   if (!siteId) return <ErrorBanner error={new Error("Missing siteId")} />;
 
-  const telemetryQuery = useQuery({
-    queryKey: queryKeys.telemetryLatest(siteId),
-    queryFn: () => getTelemetryLatest(siteId),
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.siteDashboard(siteId),
+    queryFn: () => getSiteDashboard(siteId),
     refetchInterval: usePollInterval("telemetry")
   });
-  const optimizationQuery = useQuery({
-    queryKey: queryKeys.optimizationRuns(siteId),
-    queryFn: () => getOptimizationRuns(siteId),
-    refetchInterval: usePollInterval("optimization")
-  });
-  const savingsQuery = useQuery({
-    queryKey: queryKeys.savings(siteId),
-    queryFn: () => getSavingsSummary(siteId)
-  });
 
-  const latestRun = optimizationQuery.data?.[0];
+  const { data, isLoading, isError, error } = dashboardQuery;
+
+  if (isLoading) return <LoadingSpinner />;
+  if (isError) return <ErrorBanner error={error as Error} />;
+  if (!data) return null;
+
+  const { latest_state, optimization_runs, savings, site } = data;
+  const latestRun = optimization_runs?.[0];
+
+  // Map latest_state to StatCard format
+  const stats = [
+    { label: "PV", value: latest_state.pv_kw, unit: "kW" },
+    { label: "Load", value: latest_state.load_kw, unit: "kW" },
+    { label: "Battery SOC", value: latest_state.battery_soc, unit: "%" },
+    { label: "Battery Power", value: latest_state.battery_power_kw, unit: "kW" },
+    { label: "Grid Import", value: latest_state.grid_import_kw, unit: "kW" },
+    { label: "Grid Export", value: latest_state.grid_export_kw, unit: "kW" },
+    { label: "Import Price", value: latest_state.price_import, unit: "$/kWh" },
+  ];
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <PageHeader title="Site Dashboard" subtitle={siteId} />
+      <PageHeader title={site.name || "Site Dashboard"} subtitle={siteId} />
 
       <Card title="Live telemetry">
-        {telemetryQuery.isLoading ? (
-          <LoadingSpinner />
-        ) : telemetryQuery.isError ? (
-          <ErrorBanner error={telemetryQuery.error as Error} />
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))", gap: 8 }}>
-            {Object.entries(telemetryQuery.data || {}).map(([key, value]) => (
-              <StatCard
-                key={key}
-                label={key}
-                value={value.value}
-                unit={value.unit}
-                ts={value.ts}
-                quality={value.quality}
-                stale={isStale(value.ts, 60)}
-              />
-            ))}
-          </div>
-        )}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))", gap: 8 }}>
+          {stats.map((stat) => (
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              unit={stat.unit}
+              ts={latest_state.ts}
+              quality={latest_state.online ? "good" : "bad"}
+              stale={isStale(latest_state.ts, 60)}
+            />
+          ))}
+        </div>
       </Card>
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
         <Card title="Latest optimization">
-          {optimizationQuery.isLoading ? (
-            <LoadingSpinner />
-          ) : optimizationQuery.isError ? (
-            <ErrorBanner error={optimizationQuery.error as Error} />
-          ) : latestRun ? (
+          {latestRun ? (
             <div style={{ display: "grid", gap: 8 }}>
               <div>Mode: {latestRun.mode}</div>
               <ExplanationPanel
@@ -79,15 +76,11 @@ export function SiteDetailPage() {
           )}
         </Card>
         <Card title="Savings summary">
-          {savingsQuery.isLoading ? (
-            <LoadingSpinner />
-          ) : savingsQuery.isError ? (
-            <ErrorBanner error={savingsQuery.error as Error} />
-          ) : savingsQuery.data ? (
+          {savings ? (
             <div style={{ display: "grid", gap: 6 }}>
-              <div>Baseline: {savingsQuery.data.baseline_cost.toFixed(2)}</div>
-              <div>Optimized: {savingsQuery.data.optimized_cost.toFixed(2)}</div>
-              <div>Saving: {savingsQuery.data.savings_percent.toFixed(1)}%</div>
+              <div>Baseline: {savings.baseline_cost.toFixed(2)}</div>
+              <div>Optimized: {savings.optimized_cost.toFixed(2)}</div>
+              <div>Saving: {savings.savings_percent.toFixed(1)}%</div>
             </div>
           ) : (
             <div>No savings summary available.</div>

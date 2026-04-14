@@ -14,7 +14,7 @@ class EdgeCloudClient:
         headers: dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
-        self._client = httpx.Client(base_url=self.base_url, timeout=timeout_seconds, headers=headers)
+        self._client = httpx.Client(base_url=self.base_url, timeout_seconds=timeout_seconds, headers=headers)
 
     def upload_record(self, site_id: str, gateway_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         value = payload.get("value")
@@ -35,6 +35,11 @@ class EdgeCloudClient:
             ],
         }
         response = self._client.post("/api/v1/telemetry/ingest", json=body)
+        response.raise_for_status()
+        return response.json()
+
+    def report_heartbeat(self, gateway_id: str, status_payload: dict[str, Any]) -> dict[str, Any]:
+        response = self._client.patch(f"/api/v1/gateways/{gateway_id}/heartbeat", json=status_payload)
         response.raise_for_status()
         return response.json()
 

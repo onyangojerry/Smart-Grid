@@ -537,6 +537,14 @@ def get_site_dashboard(
     policy = repo.get_active_policy(site_id)
     commands = repo.list_commands_by_site(site_id, limit=5)
     site = repo.get_site(site_id)
+    optimization_runs = repo.list_optimization_runs(site_id, limit=5)
+    
+    from ..savings.service import SavingsService
+    service = SavingsService(repo)
+    try:
+        savings = service.compute_summary(site_id)
+    except Exception:
+        savings = None
 
     return {
         "site": site,
@@ -555,6 +563,8 @@ def get_site_dashboard(
         },
         "active_policy": policy,
         "recent_commands": commands,
+        "optimization_runs": optimization_runs,
+        "savings": savings,
     }
 
 

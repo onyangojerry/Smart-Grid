@@ -4,7 +4,7 @@ import { useAuth } from "../../features/auth/useAuth";
 import { 
   Settings, LogOut, LayoutDashboard, MapPin, Cpu, 
   Activity, Zap, Terminal, PiggyBank, PlayCircle, Bell, TrendingUp,
-  Users
+  Users, Server
 } from "lucide-react";
 
 export function Sidebar() {
@@ -26,7 +26,8 @@ export function Sidebar() {
         { to: `/sites/${siteId}/savings`, label: "Savings", icon: PiggyBank },
         { to: `/sites/${siteId}/simulation`, label: "Simulation", icon: PlayCircle },
         { to: `/sites/${siteId}/alerts`, label: "Alerts", icon: Bell },
-        { to: `/sites/${siteId}/roi`, label: "ROI Calculator", icon: TrendingUp }
+        { to: `/sites/${siteId}/roi`, label: "ROI Calculator", icon: TrendingUp },
+        { to: `/sites/${siteId}/edge`, label: "Edge Management", icon: Server }
       ]
     : [{ to: "/sites", label: "Sites", icon: MapPin }];
 

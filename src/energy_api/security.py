@@ -7,6 +7,7 @@ from secrets import compare_digest
 from dataclasses import dataclass
 from typing import Iterable
 
+from datetime import datetime, timedelta, UTC
 import jwt
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -17,6 +18,27 @@ SUPER_ROLES = {"admin"}
 DEFAULT_JWT_SECRET = "dev-secret-change-me"
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def create_access_token(
+    subject: str,
+    roles: list[str],
+    client_id: str | None = None,
+    facility_ids: list[str] | None = None,
+    expires_in_minutes: int = 60,
+) -> str:
+    secret = _get_jwt_secret()
+    algorithm = os.getenv("EA_JWT_ALGORITHM", "HS256")
+    now = datetime.now(UTC)
+    payload = {
+        "sub": subject,
+        "roles": roles,
+        "client_id": client_id,
+        "facility_ids": facility_ids or [],
+        "iat": now,
+        "exp": now + timedelta(minutes=expires_in_minutes),
+    }
+    return jwt.encode(payload, secret, algorithm=algorithm)
 
 
 @dataclass(frozen=True)

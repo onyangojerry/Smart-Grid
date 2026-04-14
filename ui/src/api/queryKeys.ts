@@ -1,6 +1,6 @@
 export const queryKeys = {
   sites: () => ["sites"] as const,
-  site: (id: string) => ["sites", id] as const,
+  siteDashboard: (siteId: string) => ["sites", siteId, "dashboard"] as const,
   devices: (siteId: string) => ["devices", siteId] as const,
   assets: (siteId: string) => ["assets", siteId] as const,
   telemetryLatest: (siteId: string) => ["telemetry", siteId, "latest"] as const,

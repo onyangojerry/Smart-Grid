@@ -41,10 +41,14 @@ class FaultInjectableDataBlock(ModbusSequentialDataBlock):
 class SimulatedModbusDevice:
     host: str = "127.0.0.1"
     port: int = 15020
+    address: int = 1  # Add address parameter here
     timeout_injection_seconds: float = 1.5
 
     def __post_init__(self) -> None:
-        self._holding_block = FaultInjectableDataBlock(0, [0] * 200)
+        # Adjust address to be 1-based for pymodbus datastore if it's 0
+        self._address = self.address # Set _address from the dataclass field
+        adjusted_address = max(1, self._address) 
+        self._holding_block = FaultInjectableDataBlock(adjusted_address, [0] * 200)
         self._device_context = ModbusDeviceContext(hr=self._holding_block)
         self._context = ModbusServerContext(devices={1: self._device_context}, single=False)
         self._thread: threading.Thread | None = None

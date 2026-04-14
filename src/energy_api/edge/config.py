@@ -38,10 +38,18 @@ class EdgeServiceSettings:
     poll_interval_seconds: int
     command_interval_seconds: int
     status_interval_seconds: int
+    max_writes_per_minute: int
+    messaging_mode: str
+    mqtt_host: str
+    mqtt_port: int
+    mqtt_username: str | None
+    mqtt_password: str | None
+    mqtt_use_tls: bool
     replay_limit: int
     replay_base_backoff_seconds: int
     replay_max_backoff_seconds: int
     shutdown_grace_seconds: int
+    watchdog_device: str | None
     continue_on_poll_error: bool
     point_mappings: list[PointMapping]
 
@@ -98,10 +106,18 @@ class EdgeServiceSettings:
             poll_interval_seconds=max(1, int(os.getenv("EDGE_POLL_INTERVAL_SECONDS", "5"))),
             command_interval_seconds=max(1, int(os.getenv("EDGE_COMMAND_INTERVAL_SECONDS", "5"))),
             status_interval_seconds=max(1, int(os.getenv("EDGE_STATUS_INTERVAL_SECONDS", "10"))),
+            max_writes_per_minute=int(os.getenv("EDGE_MAX_WRITES_PER_MINUTE", "60")),
+            messaging_mode=os.getenv("EDGE_MESSAGING_MODE", "http").lower(),
+            mqtt_host=os.getenv("EDGE_MQTT_HOST", "localhost"),
+            mqtt_port=int(os.getenv("EDGE_MQTT_PORT", "1883")),
+            mqtt_username=os.getenv("EDGE_MQTT_USERNAME"),
+            mqtt_password=os.getenv("EDGE_MQTT_PASSWORD"),
+            mqtt_use_tls=_as_bool(os.getenv("EDGE_MQTT_USE_TLS", "false")),
             replay_limit=max(1, int(os.getenv("EDGE_REPLAY_LIMIT", "500"))),
             replay_base_backoff_seconds=max(1, int(os.getenv("EDGE_REPLAY_BASE_BACKOFF_SECONDS", "2"))),
             replay_max_backoff_seconds=max(1, int(os.getenv("EDGE_REPLAY_MAX_BACKOFF_SECONDS", "60"))),
             shutdown_grace_seconds=max(1, int(os.getenv("EDGE_SHUTDOWN_GRACE_SECONDS", "10"))),
+            watchdog_device=os.getenv("EDGE_WATCHDOG_DEVICE"),
             continue_on_poll_error=_as_bool(os.getenv("EDGE_CONTINUE_ON_POLL_ERROR", "true")),
             point_mappings=profile.register_points,
         )

@@ -261,20 +261,23 @@ export type ROIResult = {
   }>;
 };
 
-export type ROIScenario = {
-  id: string;
-  site_id: string;
-  name: string;
-  description: string | null;
-  battery_capacity_kwh: number;
-  battery_power_kw: number;
-  solar_capacity_kwp: number;
-  installation_cost: number;
-  annual_savings: number | null;
-  payback_years: number | null;
-  roi_percentage: number | null;
-  npv: number | null;
-  irr_percentage: number | null;
-  created_at: string;
-  updated_at: string;
+export type SiteDashboard = {
+  site: Site;
+  latest_state: {
+    ts: string;
+    pv_kw: number;
+    load_kw: number;
+    battery_soc: number;
+    battery_power_kw: number;
+    grid_import_kw: number;
+    grid_export_kw: number;
+    battery_temp_c: number | null;
+    price_import: number;
+    price_export: number;
+    online: boolean;
+  };
+  active_policy: Record<string, unknown> | null;
+  recent_commands: Command[];
+  optimization_runs: OptimizationRun[];
+  savings: SavingsSummary | null;
 };

@@ -13,13 +13,16 @@ from pathlib import Path
 from typing import Any
 
 from .config import EdgeServiceSettings
+from .messaging import EdgeMessagingClient
 from .runtime import EdgeRuntime
+from pathlib import Path # Import Path here
 
 
 @dataclass
 class EdgeRuntimeSupervisor:
     runtime: EdgeRuntime
     settings: EdgeServiceSettings
+    messaging: EdgeMessagingClient | None = None
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger("energy_api.edge.supervisor"))
 
     _stop_event: threading.Event = field(default_factory=threading.Event, init=False)
@@ -41,6 +44,16 @@ class EdgeRuntimeSupervisor:
             self.settings.modbus_port,
         )
 
+        # Initialize hardware watchdog if configured
+        watchdog_fd = None
+        if hasattr(self.settings, "watchdog_device") and self.settings.watchdog_device:
+            try:
+                import os
+                watchdog_fd = os.open(self.settings.watchdog_device, os.O_WRONLY)
+                self.logger.info("hardware_watchdog_initialized device=%s", self.settings.watchdog_device)
+            except Exception as exc:
+                self.logger.warning("hardware_watchdog_init_failed device=%s error=%s", self.settings.watchdog_device, exc)
+
         recovery = self.runtime.startup_recovery()
         self.logger.info(
             "edge_startup_recovery_complete pending_telemetry=%s unresolved_commands=%s reconciled_commands=%s replay_queue_rebuilt=%s",
@@ -55,6 +68,15 @@ class EdgeRuntimeSupervisor:
 
         while not self._stop_event.is_set():
             loop_started = time.monotonic()
+
+            # Ping watchdog
+            if watchdog_fd is not None:
+                try:
+                    import os
+                    os.write(watchdog_fd, b"\0")
+                except Exception as exc:
+                    self.logger.warning("hardware_watchdog_ping_failed error=%s", exc)
+
             try:
                 self._last_poll_result = self.runtime.run_poll_cycle()
                 self._last_replay_time = datetime.now(UTC)
@@ -68,6 +90,10 @@ class EdgeRuntimeSupervisor:
                     snapshot = self.status_snapshot()
                     self._write_status_file(snapshot)
                     self.logger.info("edge_runtime_status %s", json.dumps(snapshot, separators=(",", ":")))
+                    
+                    if self.messaging:
+                        self.messaging.report_heartbeat(self.settings.gateway_id, snapshot)
+                    
                     next_status_emit = time.monotonic() + self.settings.status_interval_seconds
 
                 self._degraded = False
