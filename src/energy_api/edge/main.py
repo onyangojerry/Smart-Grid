@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import signal
 import sys
 from types import FrameType
@@ -69,6 +70,22 @@ def run() -> None:
         bearer_token=settings.api_bearer_token,
         api_key=settings.api_key,
     )
+
+    if settings.messaging_mode == "mqtt":
+        messaging = MQTTMessagingClient(
+            host=settings.mqtt_host,
+            port=settings.mqtt_port,
+            username=settings.mqtt_username,
+            password=settings.mqtt_password,
+            use_tls=settings.mqtt_use_tls,
+        )
+    else:
+        messaging = HTTPMessagingClient(
+            base_url=settings.api_base_url,
+            timeout_seconds=settings.api_timeout_seconds,
+            bearer_token=settings.api_bearer_token,
+        )
+
     replay = ReplayService(
         store=store,
         upload_fn=lambda site_id, payload: messaging.publish_telemetry(site_id=site_id, gateway_id=settings.gateway_id, payload=payload),

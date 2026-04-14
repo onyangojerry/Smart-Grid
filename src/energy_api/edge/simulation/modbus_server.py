@@ -2,18 +2,27 @@
 # Contribution: Runs a configurable simulated Modbus server with injectable faults for timeout, bad data, disconnect, and frozen values.
 from __future__ import annotations
 
+import asyncio
 import threading
 import time
-from dataclasses import dataclass
-from typing import Iterable
+from typing import Any, Iterable
 
-from pymodbus.datastore import ModbusDeviceContext, ModbusSequentialDataBlock, ModbusServerContext
-from pymodbus.server import StartTcpServer
+from pymodbus.constants import ExcCodes
+from pymodbus.server import StartAsyncTcpServer
+from pymodbus.simulator import SimData, SimDevice, DataType
 
 
-class FaultInjectableDataBlock(ModbusSequentialDataBlock):
-    def __init__(self, address: int, values: list[int]) -> None:
-        super().__init__(address, values)
+class SimulatedModbusDevice:
+    host: str = "127.0.0.1"
+    port: int = 15020
+    address: int = 1
+    timeout_injection_seconds: float = 1.5
+
+    def __init__(self, host: str = "127.0.0.1", port: int = 15020, address: int = 1) -> None:
+        self.host = host
+        self.port = port
+        self._address = address
+        self._values: dict[int, int] = {}
         self.disconnect_enabled = False
         self.timeout_enabled = False
         self.timeout_seconds = 0.0
@@ -21,45 +30,40 @@ class FaultInjectableDataBlock(ModbusSequentialDataBlock):
         self.bad_data_value = 0xFFFF
         self.frozen_values_enabled = False
 
-    def getValues(self, address: int, count: int = 1):
+        self._simdata = SimData(address=0, values=[0] * 200, datatype=DataType.REGISTERS, count=1)
+        self._device = SimDevice(id=self._address, simdata=[self._simdata], action=self._action)
+        self._devices = [self._device]
+        self._thread: threading.Thread | None = None
+
+    async def _action(
+        self,
+        function_code: int,
+        start_address: int,
+        address: int,
+        count: int,
+        current_registers: list[int],
+        set_values: list[int] | list[bool] | None,
+    ) -> None | ExcCodes:
         if self.disconnect_enabled:
             raise ConnectionResetError("simulated disconnect")
         if self.timeout_enabled:
             time.sleep(self.timeout_seconds)
-        values = list(super().getValues(address, count))
+
+        if set_values is not None and not self.frozen_values_enabled:
+            for i, val in enumerate(set_values):
+                self._values[address + i] = val & 0xFFFF
+
         if self.bad_data_enabled:
-            return [self.bad_data_value for _ in values]
-        return values
+            return ExcCodes.ILLEGAL_DATA_VALUE
 
-    def setValues(self, address: int, values):
-        if self.frozen_values_enabled:
-            return
-        super().setValues(address, values)
+        return None
 
-
-@dataclass
-class SimulatedModbusDevice:
-    host: str = "127.0.0.1"
-    port: int = 15020
-    address: int = 1  # Add address parameter here
-    timeout_injection_seconds: float = 1.5
-
-    def __post_init__(self) -> None:
-        # Adjust address to be 1-based for pymodbus datastore if it's 0
-        self._address = self.address # Set _address from the dataclass field
-        adjusted_address = max(1, self._address) 
-        self._holding_block = FaultInjectableDataBlock(adjusted_address, [0] * 200)
-        self._device_context = ModbusDeviceContext(hr=self._holding_block)
-        self._context = ModbusServerContext(devices={1: self._device_context}, single=False)
-        self._thread: threading.Thread | None = None
-
-    # The server runs in a daemon thread, so it will automatically stop when the main program exits.
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
             return
 
         def _run_server() -> None:
-            StartTcpServer(context=self._context, address=(self.host, self.port))
+            asyncio.run(StartAsyncTcpServer(context=self._devices, address=(self.host, self.port)))
 
         self._thread = threading.Thread(target=_run_server, daemon=True)
         self._thread.start()
@@ -73,21 +77,22 @@ class SimulatedModbusDevice:
                 self.set_holding_registers(address, list(value))
 
     def set_holding_register(self, address: int, value: int) -> None:
-        self._holding_block.setValues(address + 1, [value & 0xFFFF])
+        self._values[address] = value & 0xFFFF
 
     def set_holding_registers(self, address: int, values: list[int]) -> None:
-        self._holding_block.setValues(address + 1, [int(v) & 0xFFFF for v in values])
+        for i, v in enumerate(values):
+            self._values[address + i] = int(v) & 0xFFFF
 
     def inject_timeout(self, enabled: bool, timeout_seconds: float | None = None) -> None:
-        self._holding_block.timeout_enabled = enabled
-        self._holding_block.timeout_seconds = timeout_seconds if timeout_seconds is not None else self.timeout_injection_seconds
+        self.timeout_enabled = enabled
+        self.timeout_seconds = timeout_seconds if timeout_seconds is not None else self.timeout_injection_seconds
 
     def inject_bad_data(self, enabled: bool, bad_value: int = 0xFFFF) -> None:
-        self._holding_block.bad_data_enabled = enabled
-        self._holding_block.bad_data_value = bad_value & 0xFFFF
+        self.bad_data_enabled = enabled
+        self.bad_data_value = bad_value & 0xFFFF
 
     def inject_disconnect(self, enabled: bool) -> None:
-        self._holding_block.disconnect_enabled = enabled
+        self.disconnect_enabled = enabled
 
     def freeze_values(self, enabled: bool) -> None:
-        self._holding_block.frozen_values_enabled = enabled
+        self.frozen_values_enabled = enabled

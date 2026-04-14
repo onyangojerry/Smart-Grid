@@ -58,7 +58,9 @@ class Principal:
 
 def _parse_service_keys() -> dict[str, Principal]:
     raw = os.getenv("EA_SERVICE_KEYS", "")
+    logger.debug("EA_SERVICE_KEYS raw value: %s", raw)
     if not raw:
+        logger.info("EA_SERVICE_KEYS not set, using default service keys")
         return {
             "ops-key": Principal(
                 subject="svc_ops",
@@ -81,18 +83,38 @@ def _parse_service_keys() -> dict[str, Principal]:
         segment = part.strip()
         if not segment:
             continue
-        key, subject, roles, client = (segment.split(":") + ["", "", "", ""])[:4]
-        key = key.strip()
+        parts = segment.split(":")
+        key = parts[0].strip() if len(parts) > 0 else ""
+        subject = parts[1].strip() if len(parts) > 1 else "service_account"
+        roles_str = parts[2].strip() if len(parts) > 2 else ""
+        client = parts[3].strip() if len(parts) > 3 and parts[3] else None
+        
         if not key:
             continue
-        role_set = {role.strip() for role in roles.split("|") if role.strip()}
+        role_set = {role.strip() for role in roles_str.split("|") if role.strip()}
+        if not role_set:
+            role_set = {"ops_admin"}  # Default role if not specified
+        
         output[key] = Principal(
-            subject=subject or "service_account",
+            subject=subject,
             roles=role_set,
-            client_id=client or None,
+            client_id=client,
             facility_ids=set(),
             token_type="service_key",
         )
+        logger.info("Loaded service key: key=%s subject=%s roles=%s", key, subject, role_set)
+    
+    if not output:
+        logger.warning("EA_SERVICE_KEYS parsed but resulted in empty keys, using defaults")
+        return {
+            "ops-key": Principal(
+                subject="svc_ops",
+                roles={"ops_admin"},
+                client_id=None,
+                facility_ids=set(),
+                token_type="service_key",
+            ),
+        }
     return output
 
 
@@ -123,12 +145,14 @@ def get_current_principal(
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ) -> Principal:
     service_keys = _parse_service_keys()
+    logger.debug("get_current_principal: x_api_key=%s, bearer=%s", x_api_key, "present" if credentials else "absent")
+    
     if x_api_key:
         for key, principal in service_keys.items():
             if compare_digest(key, x_api_key):
                 logger.info("auth_principal_resolved token_type=service_key subject=%s", principal.subject)
                 return principal
-        logger.warning("auth_service_key_unrecognized")
+        logger.warning("auth_service_key_unrecognized key_provided=%s available_keys=%s", x_api_key, list(service_keys.keys()))
 
     if not credentials:
         logger.warning("auth_missing_credentials")
