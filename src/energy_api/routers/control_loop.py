@@ -4,6 +4,7 @@
 # /Users/loan/Desktop/energyallocation/src/energy_api/routers/control_loop.py
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Any, Literal
 
@@ -11,11 +12,38 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from energy_api.control import CommandDispatcher, ControlRepository, RuleEngine, StateEngine
-from energy_api.security import require_roles
+from energy_api.control.models import ScoreBreakdown, ScoredAction
+from energy_api.security import Principal, require_roles
 from energy_api.savings import SavingsService
 from energy_api.simulation import SimulatedSite, run_simulation
 
 router = APIRouter(prefix="/api/v1", tags=["Control Loop"])
+logger = logging.getLogger("energy_api.routers.control_loop")
+
+
+_CANONICAL_UNITS: dict[str, str] = {
+    "site_load_kw": "kW",
+    "pv_generation_kw": "kW",
+    "pv_kw": "kW",
+    "load_kw": "kW",
+    "battery_power_kw": "kW",
+    "grid_import_kw": "kW",
+    "grid_export_kw": "kW",
+    "battery_soc": "%",
+    "battery_voltage_v": "V",
+    "battery_current_a": "A",
+    "battery_temp_c": "C",
+    "price_import": "EUR/kWh",
+    "price_export": "EUR/kWh",
+    "inverter_mode": "",
+    "alarm_code": "",
+    "device_online": "",
+    "device_fault": "",
+}
+
+
+def _telemetry_unit_for_row(row: dict[str, Any], key: str) -> str:
+    return row.get("unit") or _CANONICAL_UNITS.get(key, "kW")
 
 
 @router.get("/sites/{site_id}/telemetry/latest")
@@ -35,7 +63,7 @@ def get_telemetry_latest(
                 quality = "estimated"
             result[key] = {
                 "value": row["value"],
-                "unit": "kW",  # Defaulting to kW as standard in models
+                "unit": _telemetry_unit_for_row(row, key),
                 "ts": row["ts"].isoformat(),
                 "quality": quality,
             }
@@ -64,7 +92,7 @@ def get_telemetry_history(
                 "canonical_key": row["canonical_key"],
                 "ts": row["ts"].isoformat(),
                 "value": row["value"],
-                "unit": row["unit"] or "kW",
+                "unit": _telemetry_unit_for_row(row, row["canonical_key"]),
                 "quality": quality,
             }
         )
@@ -309,26 +337,19 @@ def create_asset_device(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.post("/devices/{device_id}/mappings", status_code=201)
-def create_device_mapping(
-    device_id: str,
-    payload: dict[str, Any],
-    _principal: dict[str, Any] = Depends(require_roles("client_admin", "ops_admin")),
-) -> dict[str, Any]:
-    repo = ControlRepository()
-    return repo.create_device_mapping(
-        device_id=device_id,
-        source_key=payload.get("source_key", ""),
-        canonical_key=payload.get("canonical_key", ""),
-        scale_factor=float(payload.get("scale_factor", 1.0)),
-    )
-
-
 @router.post("/telemetry/ingest")
 def ingest_telemetry(
     payload: TelemetryBatchIn,
-    _principal: dict[str, Any] = Depends(require_roles("client_admin", "facility_manager", "ops_admin", "ml_engineer")),
+    principal: Principal = Depends(require_roles("client_admin", "facility_manager", "ops_admin", "ml_engineer")),
 ) -> dict[str, Any]:
+    logger.info(
+        "telemetry_ingest_received auth_type=%s subject=%s site_id=%s gateway_id=%s points=%s",
+        principal.token_type,
+        principal.subject,
+        payload.site_id,
+        payload.gateway_id,
+        len(payload.points),
+    )
     repo = ControlRepository()
     repo.upsert_site_defaults(payload.site_id)
 
@@ -337,6 +358,13 @@ def ingest_telemetry(
 
     missing = sorted({key for key in keys if key not in stream_map})
     if missing:
+        logger.warning(
+            "telemetry_ingest_rejected_missing_streams auth_type=%s subject=%s site_id=%s missing=%s",
+            principal.token_type,
+            principal.subject,
+            payload.site_id,
+            missing,
+        )
         raise HTTPException(status_code=400, detail={"missing_streams": missing})
 
     rows = []
@@ -353,13 +381,24 @@ def ingest_telemetry(
         )
 
     inserted = repo.insert_telemetry_points(rows)
-    return {
+    response = {
         "site_id": payload.site_id,
         "gateway_id": payload.gateway_id,
         "received": len(payload.points),
         "inserted": inserted,
         "deduplicated": len(payload.points) - inserted,
     }
+    logger.info(
+        "telemetry_ingest_accepted auth_type=%s subject=%s site_id=%s gateway_id=%s received=%s inserted=%s deduplicated=%s",
+        principal.token_type,
+        principal.subject,
+        payload.site_id,
+        payload.gateway_id,
+        response["received"],
+        response["inserted"],
+        response["deduplicated"],
+    )
+    return response
 
 
 @router.post("/sites/{site_id}/optimize/run")
@@ -481,22 +520,29 @@ def issue_command(
     _principal: dict[str, Any] = Depends(require_roles("client_admin", "facility_manager", "ops_admin", "ml_engineer")),
 ) -> dict[str, Any]:
     repo = ControlRepository()
-    policy = repo.get_active_policy(site_id)
     device_id = repo.get_primary_device_id(site_id)
     dispatcher = CommandDispatcher(repo)
 
-    # Build an adapter action-like object for direct commands
-    action = RuleEngine().evaluate(
-        StateEngine(repo).build_site_state(site_id),
-        policy,
-        forecast_peak=False,
-    )
-    action = type(action)(
+    action = ScoredAction(
         action_type=payload.command_type,
         target_power_kw=float(payload.target_power_kw or 0.0),
-        score=action.score,
-        explanation=action.explanation,
+        score=ScoreBreakdown(
+            energy_cost=0.0,
+            battery_degradation_penalty=0.0,
+            reserve_violation_penalty=0.0,
+            command_churn_penalty=0.0,
+            device_safety_penalty=0.0,
+        ),
+        explanation={
+            "decision": "manual_command",
+            "operator_intent": payload.command_type,
+            "reason": payload.reason,
+            "target_power_kw": float(payload.target_power_kw or 0.0),
+            "target_soc": payload.target_soc,
+            "idempotency_key": payload.idempotency_key,
+        },
         reason=payload.reason,
+        economic_class=ScoredAction.classify_economic_intent(payload.command_type),
     )
 
     result = dispatcher.dispatch(
@@ -506,7 +552,7 @@ def issue_command(
         reason=payload.reason,
         target_soc=payload.target_soc,
         idempotency_key=payload.idempotency_key,
-        ack_block_seconds=int(policy.get("pending_ack_block_seconds", 30)),
+        ack_block_seconds=30,
     )
     return result
 

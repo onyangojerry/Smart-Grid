@@ -21,6 +21,7 @@ class EdgeServiceSettings:
     api_base_url: str
     api_timeout_seconds: float
     api_bearer_token: str | None
+    api_key: str | None
     modbus_host: str
     modbus_port: int
     modbus_timeout_seconds: float
@@ -89,6 +90,7 @@ class EdgeServiceSettings:
             api_base_url=os.getenv("EA_API_BASE_URL", "http://localhost:8000"),
             api_timeout_seconds=float(os.getenv("EDGE_API_TIMEOUT_SECONDS", "10.0")),
             api_bearer_token=os.getenv("EDGE_API_BEARER_TOKEN"),
+            api_key=os.getenv("EDGE_API_KEY"),
             modbus_host=os.getenv("EDGE_MODBUS_HOST", "127.0.0.1"),
             modbus_port=int(os.getenv("EDGE_MODBUS_PORT", "15020")),
             modbus_timeout_seconds=float(os.getenv("EDGE_MODBUS_TIMEOUT_SECONDS", "3.0")),

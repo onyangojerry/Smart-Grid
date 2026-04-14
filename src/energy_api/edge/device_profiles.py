@@ -145,8 +145,20 @@ def load_profile(profile_name: str, register_map_path: str | None = None) -> Dev
     if profile is None:
         raise ValueError(f"unsupported profile_name={profile_name}")
     if not register_map_path:
+        from .profile_validation import validate_profile
+
+        errors = validate_profile(profile)
+        if errors:
+            raise ValueError(f"invalid profile_name={profile_name}: {errors}")
         return profile
-    return merge_profile_overrides(profile, register_map_path, profile_name=profile_name)
+
+    merged_profile = merge_profile_overrides(profile, register_map_path, profile_name=profile_name)
+    from .profile_validation import validate_profile
+
+    errors = validate_profile(merged_profile)
+    if errors:
+        raise ValueError(f"invalid profile_name={profile_name}: {errors}")
+    return merged_profile
 
 
 def merge_profile_overrides(profile: DeviceProfile, register_map_path: str, profile_name: str | None = None) -> DeviceProfile:

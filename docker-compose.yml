@@ -76,6 +76,7 @@ services:
       EDGE_STATUS_FILE: /app/data/edge/status.json
       EA_API_BASE_URL: http://api:8000
       EDGE_API_BEARER_TOKEN: ${EDGE_API_BEARER_TOKEN:-}
+      EDGE_API_KEY: ${EDGE_API_KEY:-ops-key}
       EDGE_MODBUS_HOST: modbus-sim
       EDGE_MODBUS_PORT: 15020
       EDGE_ALLOW_PROFILE_UNIT_ID_OVERRIDE: false

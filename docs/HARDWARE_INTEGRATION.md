@@ -47,6 +47,7 @@ Unit ID resolution:
 
 ## Startup Mismatch Protection
 
+- Profiles are validated on load. Invalid profiles, including incomplete scaffolds, fail before runtime control starts.
 - Runtime fails fast if profile validation fails for non-simulated profiles.
 - Runtime fails fast on Unit ID mismatch unless explicit override gate is enabled.
 - Runtime fails fast when both read-only and observation-only are enabled simultaneously.

@@ -26,22 +26,33 @@ class SavingsService:
         baseline_cost = 0.0
         battery_cycles = 0.0
         peak_reduction = 0.0
+        taxonomy_counts = {
+            "charge": 0,
+            "discharge": 0,
+            "idle": 0,
+            "mode": 0,
+            "grid_limit": 0,
+            "other": 0,
+        }
 
         for command in commands:
             command_type = command.get("command_type")
             target_power_kw = float(command.get("target_power_kw") or 0.0)
             slot_hours = 5.0 / 60.0
+            normalized = self._normalize_command_type(command_type)
+            taxonomy_counts[normalized] += 1
 
-            if command_type == "discharge":
+            if normalized == "discharge":
                 optimized_cost += max(0.0, 2.0 - target_power_kw) * avg_import_price * slot_hours
                 baseline_cost += 2.0 * avg_import_price * slot_hours
                 battery_cycles += target_power_kw * slot_hours / 10.0
                 peak_reduction = max(peak_reduction, target_power_kw)
-            elif command_type == "charge":
+            elif normalized == "charge":
                 optimized_cost += (2.0 + target_power_kw) * avg_import_price * slot_hours
                 baseline_cost += 2.0 * avg_import_price * slot_hours
                 battery_cycles += target_power_kw * slot_hours / 10.0
             else:
+                # Non-energy-shifting commands remain baseline-neutral in this summary model.
                 optimized_cost += 2.0 * avg_import_price * slot_hours
                 baseline_cost += 2.0 * avg_import_price * slot_hours
 
@@ -75,4 +86,20 @@ class SavingsService:
             "battery_cycles": round(battery_cycles, 4),
             "self_consumption_percent": round(self_consumption_percent, 4),
             "peak_demand_reduction": round(peak_reduction, 4),
+            "command_taxonomy": taxonomy_counts,
         }
+
+    @staticmethod
+    def _normalize_command_type(command_type: Any) -> str:
+        command = str(command_type or "").strip().lower()
+        if command in {"charge", "charge_setpoint_kw"}:
+            return "charge"
+        if command in {"discharge", "discharge_setpoint_kw"}:
+            return "discharge"
+        if command == "idle":
+            return "idle"
+        if command == "set_mode":
+            return "mode"
+        if command in {"set_limit", "set_grid_limit_kw", "set_export_limit_kw"}:
+            return "grid_limit"
+        return "other"

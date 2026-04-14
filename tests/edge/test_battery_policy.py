@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from energy_api.control.battery_policy import BatteryPolicyConfig, BatteryPolicyEngine
 from energy_api.control.models import SiteState
@@ -73,6 +73,49 @@ class TestBatteryPolicy(unittest.TestCase):
         cfg = BatteryPolicyConfig(unresolved_critical_command=True)
         action = engine.decide(state, tariff, cfg, datetime.now(UTC))
         self.assertEqual(action.action_type, "idle")
+
+    def test_minimum_action_duration_continues_same_direction(self) -> None:
+        engine = BatteryPolicyEngine()
+        cfg = BatteryPolicyConfig(minimum_action_duration=300, minimum_direction_change_gap=600)
+        tariff = TariffState(import_price=0.22, export_price=0.07, is_peak=False, is_shoulder=True, tariff_name="shoulder")
+        first_state = self._state(pv_kw=6.0, load_kw=2.0, battery_soc=40.0)
+        first_now = datetime.now(UTC)
+        first_action = engine.decide(first_state, tariff, cfg, first_now)
+
+        second_state = self._state(pv_kw=1.0, load_kw=4.5, battery_soc=70.0)
+        second_tariff = TariffState(import_price=0.35, export_price=0.07, is_peak=True, is_shoulder=False, tariff_name="peak")
+        second_action = engine.decide(second_state, second_tariff, cfg, first_now + timedelta(seconds=60))
+
+        self.assertEqual(first_action.action_type, "charge_setpoint_kw")
+        self.assertEqual(second_action.action_type, "charge_setpoint_kw")
+        self.assertEqual(second_action.reason, "minimum_action_duration")
+
+    def test_direction_change_is_blocked_until_gap_elapses(self) -> None:
+        engine = BatteryPolicyEngine()
+        cfg = BatteryPolicyConfig(minimum_action_duration=300, minimum_direction_change_gap=600)
+        charge_tariff = TariffState(import_price=0.22, export_price=0.07, is_peak=False, is_shoulder=True, tariff_name="shoulder")
+        charge_state = self._state(pv_kw=6.0, load_kw=2.0, battery_soc=40.0)
+        first_now = datetime.now(UTC)
+        engine.decide(charge_state, charge_tariff, cfg, first_now)
+
+        discharge_state = self._state(pv_kw=0.4, load_kw=4.2, battery_soc=70.0)
+        discharge_tariff = TariffState(import_price=0.35, export_price=0.07, is_peak=True, is_shoulder=False, tariff_name="peak")
+        blocked_action = engine.decide(discharge_state, discharge_tariff, cfg, first_now + timedelta(seconds=301))
+
+        self.assertEqual(blocked_action.action_type, "idle")
+        self.assertEqual(blocked_action.reason, "direction_change_gap")
+
+    def test_same_direction_continuation_is_not_blocked(self) -> None:
+        engine = BatteryPolicyEngine()
+        cfg = BatteryPolicyConfig(minimum_action_duration=300, minimum_direction_change_gap=600)
+        tariff = TariffState(import_price=0.22, export_price=0.07, is_peak=False, is_shoulder=True, tariff_name="shoulder")
+        state = self._state(pv_kw=6.0, load_kw=2.0, battery_soc=40.0)
+        first_now = datetime.now(UTC)
+        engine.decide(state, tariff, cfg, first_now)
+
+        continued_action = engine.decide(state, tariff, cfg, first_now + timedelta(seconds=301))
+
+        self.assertEqual(continued_action.action_type, "charge_setpoint_kw")
 
 
 if __name__ == "__main__":

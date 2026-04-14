@@ -46,6 +46,8 @@ Supported profile identifiers:
 - sma_sunspec_home_bess
 - sma_native_modbus_home_bess (scaffold)
 
+Profiles are validated at load time. Incomplete scaffold profiles fail loudly instead of being treated as usable.
+
 ## Victron GX
 
 - Default Unit ID is 100 in this profile.

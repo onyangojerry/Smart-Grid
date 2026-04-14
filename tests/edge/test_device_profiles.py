@@ -34,6 +34,12 @@ class TestDeviceProfiles(unittest.TestCase):
         self.assertEqual(profile.version, "v1.0.0")
         self.assertEqual(validate_profile(profile), [])
 
+    def test_incomplete_native_profile_fails_on_load(self) -> None:
+        with self.assertRaises(ValueError) as cm:
+            load_profile("sma_native_modbus_home_bess")
+
+        self.assertIn("invalid profile_name=sma_native_modbus_home_bess", str(cm.exception))
+
     def test_profile_override_file(self) -> None:
         payload = {
             "description": "Victron profile for specific deployment",
@@ -113,11 +119,56 @@ class TestDeviceProfiles(unittest.TestCase):
             ],
             "command_points": [
                 {
+                    "canonical_command": "charge_setpoint_kw",
+                    "write_address": 2714,
+                    "write_type": "holding",
+                    "value_encoding": "signed_scale",
+                    "verify_address": 2714,
+                    "verify_mode": "observed_positive",
+                    "supports_readback": True,
+                },
+                {
+                    "canonical_command": "discharge_setpoint_kw",
+                    "write_address": 2714,
+                    "write_type": "holding",
+                    "value_encoding": "signed_scale",
+                    "verify_address": 2714,
+                    "verify_mode": "observed_negative",
+                    "supports_readback": True,
+                },
+                {
+                    "canonical_command": "idle",
+                    "write_address": 2714,
+                    "write_type": "holding",
+                    "value_encoding": "signed_scale",
+                    "verify_address": 2714,
+                    "verify_mode": "observed_near_zero",
+                    "supports_readback": True,
+                },
+                {
+                    "canonical_command": "set_mode",
+                    "write_address": 2700,
+                    "write_type": "holding",
+                    "value_encoding": "enum",
+                    "verify_address": 2700,
+                    "verify_mode": "mode_equals",
+                    "supports_readback": True,
+                },
+                {
                     "canonical_command": "set_grid_limit_kw",
                     "write_address": 2716,
                     "write_type": "holding",
                     "value_encoding": "signed_scale",
                     "verify_address": 2716,
+                    "verify_mode": "readback_equals",
+                    "supports_readback": True,
+                },
+                {
+                    "canonical_command": "set_export_limit_kw",
+                    "write_address": 2717,
+                    "write_type": "holding",
+                    "value_encoding": "signed_scale",
+                    "verify_address": 2717,
                     "verify_mode": "readback_equals",
                     "supports_readback": True,
                 }
@@ -130,7 +181,7 @@ class TestDeviceProfiles(unittest.TestCase):
 
         self.assertEqual(profile.default_unit_id, 100)
         self.assertTrue(profile.supports_writes)
-        self.assertEqual(len(profile.command_points), 1)
+        self.assertEqual(len(profile.command_points), 6)
 
     def test_invalid_example_missing_version_fails(self) -> None:
         errors = validate_profile_file(Path("profiles/invalid_examples/missing_version.json"))

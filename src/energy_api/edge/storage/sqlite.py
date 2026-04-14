@@ -32,10 +32,17 @@ class EdgeSQLiteStore:
                   created_at TEXT NOT NULL,
                   attempt_count INTEGER NOT NULL DEFAULT 0,
                   next_attempt_at TEXT NOT NULL,
-                  last_error TEXT
+                  last_error TEXT,
+                  failure_class TEXT DEFAULT 'unclassified'
                 )
                 """
             )
+            # Add failure_class column if it doesn't exist (migration for existing tables)
+            try:
+                conn.execute("ALTER TABLE telemetry_buffer ADD COLUMN failure_class TEXT DEFAULT 'unclassified'")
+            except Exception:
+                # Column already exists, ignore error
+                pass
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS command_queue (
@@ -115,7 +122,7 @@ class EdgeSQLiteStore:
         with self._connect() as conn:
             cursor = conn.execute(
                 """
-                SELECT id, site_id, payload_json, created_at, attempt_count, next_attempt_at, last_error
+                SELECT id, site_id, payload_json, created_at, attempt_count, next_attempt_at, last_error, COALESCE(failure_class, 'unclassified')
                 FROM telemetry_buffer
                 WHERE next_attempt_at <= ?
                 ORDER BY id ASC
@@ -136,6 +143,7 @@ class EdgeSQLiteStore:
                     "attempt_count": row[4],
                     "next_attempt_at": row[5],
                     "last_error": row[6],
+                    "failure_class": row[7],
                 }
             )
         return output
@@ -157,7 +165,7 @@ class EdgeSQLiteStore:
         with self.transaction() as conn:
             conn.execute("DELETE FROM telemetry_buffer WHERE id = ?", (row_id,))
 
-    def mark_telemetry_retry(self, row_id: int, error: str, backoff_seconds: int) -> None:
+    def mark_telemetry_retry(self, row_id: int, error: str, backoff_seconds: int, failure_class: str | None = None) -> None:
         next_attempt = (datetime.now(UTC)).timestamp() + max(0, backoff_seconds)
         next_attempt_at = datetime.fromtimestamp(next_attempt, tz=UTC).isoformat()
         with self.transaction() as conn:
@@ -166,10 +174,11 @@ class EdgeSQLiteStore:
                 UPDATE telemetry_buffer
                 SET attempt_count = attempt_count + 1,
                     next_attempt_at = ?,
-                    last_error = ?
+                    last_error = ?,
+                    failure_class = COALESCE(?, failure_class)
                 WHERE id = ?
                 """,
-                (next_attempt_at, error[:512], row_id),
+                (next_attempt_at, error[:512], failure_class or "unclassified", row_id),
             )
 
     def upsert_command(

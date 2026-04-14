@@ -20,6 +20,7 @@ Copy and customize:
 
 Critical variables:
 - `EA_JWT_SECRET`
+- `EA_SERVICE_KEYS`
 - `EA_DATABASE_URL`
 - `EA_COMMAND_MAX_RETRIES`
 - `EA_PENDING_ACK_BLOCK_SECONDS`
@@ -29,9 +30,17 @@ Critical variables:
 - `EDGE_MODBUS_HOST`
 - `EDGE_MODBUS_PORT`
 - `EA_API_BASE_URL`
+- `EDGE_API_KEY` (preferred edge ingest service key; sent as `X-API-Key`)
 - `EDGE_API_BEARER_TOKEN` (optional bearer token for authenticated ingest)
 - `EDGE_SQLITE_PATH`
 - `EDGE_STATUS_FILE`
+
+## Compose edge ingest auth model
+- API telemetry ingest endpoint remains protected by role authorization.
+- Edge runtime authenticates to API using `X-API-Key` when `EDGE_API_KEY` is set.
+- Compose default aligns `EDGE_API_KEY=ops-key` with the default `EA_SERVICE_KEYS` entry (`ops-key:svc_ops:ops_admin:`).
+- Deterministic precedence in edge runtime: API key is primary; bearer is fallback only when `EDGE_API_KEY` is absent.
+- `EDGE_API_BEARER_TOKEN` remains supported for JWT-based auth fallback when desired.
 
 ## Edge runtime startup
 Canonical entrypoint:

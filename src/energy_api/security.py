@@ -2,6 +2,7 @@
 # Contribution: Implements JWT/API-key authentication, role authorization, and tenant scope enforcement utilities.
 from __future__ import annotations
 
+import logging
 import os
 from secrets import compare_digest
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ SUPER_ROLES = {"admin"}
 DEFAULT_JWT_SECRET = "dev-secret-change-me"
 
 bearer_scheme = HTTPBearer(auto_error=False)
+logger = logging.getLogger("energy_api.security")
 
 
 def create_access_token(
@@ -124,9 +126,12 @@ def get_current_principal(
     if x_api_key:
         for key, principal in service_keys.items():
             if compare_digest(key, x_api_key):
+                logger.info("auth_principal_resolved token_type=service_key subject=%s", principal.subject)
                 return principal
+        logger.warning("auth_service_key_unrecognized")
 
     if not credentials:
+        logger.warning("auth_missing_credentials")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
 
     secret = _get_jwt_secret()
@@ -134,6 +139,7 @@ def get_current_principal(
     try:
         claims = jwt.decode(credentials.credentials, secret, algorithms=[algorithm])
     except jwt.InvalidTokenError as exc:
+        logger.warning("auth_invalid_jwt")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
     roles = claims.get("roles", [])
@@ -148,7 +154,10 @@ def get_current_principal(
         token_type="jwt",
     )
     if not principal.roles:
+        logger.warning("auth_principal_no_roles subject=%s", principal.subject)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No roles assigned")
+
+    logger.info("auth_principal_resolved token_type=jwt subject=%s", principal.subject)
 
     return principal
 

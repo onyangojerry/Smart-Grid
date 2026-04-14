@@ -17,6 +17,7 @@ The repository now treats the control-loop backend as canonical and retires the 
 - `docs/SIMULATION.md`
 - `docs/API.md`
 - `docs/AUTH.md`
+- `docs/EDGE_RESILIENCE.md` (failure classification, backoff strategy, v2 reporting prep)
 - `docs/data-engineering.md`
 - `docs/MIGRATION_NOTES.md`
 
@@ -70,7 +71,10 @@ Common local environment variables for edge runtime:
 - `EDGE_MODBUS_UNIT_ID` (optional explicit value; strict mismatch checks apply)
 - `EDGE_ALLOW_PROFILE_UNIT_ID_OVERRIDE` (default `false`; required when overriding profile default unit ID)
 - `EA_API_BASE_URL` (default `http://localhost:8000`)
-- `EDGE_API_BEARER_TOKEN` (optional bearer token for authenticated ingest)
+- `EDGE_API_KEY` (preferred for service-to-service ingest auth via `X-API-Key`; takes precedence over bearer token)
+- `EDGE_API_BEARER_TOKEN` (optional JWT bearer token for ingest auth; fallback if API key absent)
+  - **Note:** API key has deterministic precedence. If both are set, only X-API-Key is sent.
+  - Auth failures (401/403) do NOT retry automatically; check logs for `failure_class=auth_failure`
 - `EDGE_SQLITE_PATH` (default `./data/edge/edge_runtime.db`)
 - `EDGE_STATUS_FILE` (default `./data/edge/status.json`)
 
@@ -125,7 +129,26 @@ Use either:
 Current repository state:
 - Implemented in code: Modbus TCP adapter, point decoder, poller, staleness tracking, replay/backoff, command execution/reconciliation, and SQLite-backed edge storage under `src/energy_api/edge/`.
 - Implemented in API/data model: gateway and point-mapping endpoints plus edge metadata tables.
-- Remaining blockers for field deployment: production messaging transport strategy (MQTT or hardened HTTP path), token provisioning strategy for authenticated ingest, and long-duration operational hardening/runbooks.
+- Remaining blockers for field deployment: production messaging transport strategy (MQTT or hardened HTTP path) and long-duration operational hardening/runbooks.
+
+## Compose edge ingest auth
+- Compose/local edge-to-API ingest uses service authentication by default with `EDGE_API_KEY` and `X-API-Key` header.
+- API validates service keys from `EA_SERVICE_KEYS` and grants service roles (for example `ops_admin`) to authorize `/api/v1/telemetry/ingest`.
+- Default compose wiring uses `EDGE_API_KEY=ops-key` with matching `EA_SERVICE_KEYS` default entry.
+- Deterministic precedence in edge runtime: if `EDGE_API_KEY` is set, edge sends only `X-API-Key`; bearer token is used only when API key is absent.
+- JWT bearer auth remains supported for ingest fallback when `EDGE_API_KEY` is not set and `EDGE_API_BEARER_TOKEN` is supplied.
+
+## Savings command taxonomy
+Savings summaries normalize command names so reporting matches controller/runtime behavior:
+- Charge: `charge`, `charge_setpoint_kw`
+- Discharge: `discharge`, `discharge_setpoint_kw`
+- Idle: `idle`
+- Mode: `set_mode`
+- Grid/export limits: `set_limit`, `set_grid_limit_kw`, `set_export_limit_kw`
+
+Current v1 economics model:
+- Economically modeled actions: charge/discharge command groups.
+- Economically neutral actions (counted and reported, but baseline-neutral): `idle`, `set_mode`, and grid/export limit commands.
 
 ## Edge runtime status (March 2026)
 - Edge modules are present and tested (unit/integration style tests in `tests/edge/`).

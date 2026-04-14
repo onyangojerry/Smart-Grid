@@ -61,26 +61,14 @@ def run() -> None:
         unit_id=settings.modbus_unit_id,
         profile=settings.profile,
         allow_writes=allow_writes,
-        max_writes_per_minute=settings.max_writes_per_minute,
     )
 
-    if settings.messaging_mode == "mqtt":
-        messaging: EdgeMessagingClient = MQTTMessagingClient(
-            host=settings.mqtt_host,
-            port=settings.mqtt_port,
-            username=settings.mqtt_username,
-            password=settings.mqtt_password,
-            use_tls=settings.mqtt_use_tls,
-        )
-        logger.info("edge_messaging_initialized mode=mqtt host=%s port=%s", settings.mqtt_host, settings.mqtt_port)
-    else:
-        messaging = HTTPMessagingClient(
-            base_url=settings.api_base_url,
-            timeout_seconds=settings.api_timeout_seconds,
-            bearer_token=settings.api_bearer_token,
-        )
-        logger.info("edge_messaging_initialized mode=http base_url=%s", settings.api_base_url)
-
+    cloud = EdgeCloudClient(
+        base_url=settings.api_base_url,
+        timeout_seconds=settings.api_timeout_seconds,
+        bearer_token=settings.api_bearer_token,
+        api_key=settings.api_key,
+    )
     replay = ReplayService(
         store=store,
         upload_fn=lambda site_id, payload: messaging.publish_telemetry(site_id=site_id, gateway_id=settings.gateway_id, payload=payload),
