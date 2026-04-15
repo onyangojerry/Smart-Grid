@@ -71,9 +71,12 @@ class SimulatedModbusDevice:
             return garbage
 
         if self.frozen_values_enabled:
-            # Return None to let pymodbus use whatever is currently in self._simdata.values
-            # which we stop updating in set_holding_register when frozen_values_enabled is True
-            return None
+            # Return the frozen values from self._values, not whatever garbage may be in simdata.values
+            frozen = []
+            for i in range(count):
+                reg_addr = address + i
+                frozen.append(self._values.get(reg_addr, 0))
+            return frozen
 
         # Normal read: Sync datastore with our internal values before returning
         for i in range(count):
@@ -105,19 +108,21 @@ class SimulatedModbusDevice:
                 self.set_holding_registers(address, list(value))
 
     def set_holding_register(self, address: int, value: int) -> None:
+        if self.frozen_values_enabled:
+            return
         val = value & 0xFFFF
         self._values[address] = val
-        if not self.frozen_values_enabled:
-            if address < len(self._simdata.values):
-                self._simdata.values[address] = val
+        if address < len(self._simdata.values):
+            self._simdata.values[address] = val
 
     def set_holding_registers(self, address: int, values: list[int]) -> None:
+        if self.frozen_values_enabled:
+            return
         for i, v in enumerate(values):
             val = int(v) & 0xFFFF
             self._values[address + i] = val
-            if not self.frozen_values_enabled:
-                if address + i < len(self._simdata.values):
-                    self._simdata.values[address + i] = val
+            if address + i < len(self._simdata.values):
+                self._simdata.values[address + i] = val
 
     def inject_timeout(self, enabled: bool, timeout_seconds: float | None = None) -> None:
         self.timeout_enabled = enabled
