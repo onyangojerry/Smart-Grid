@@ -791,19 +791,31 @@ class ControlRepository:
             result[row["severity"]] = int(row["count"])
         return result
 
-    def create_edge_gateway(self, site_id: str, name: str, host: str, port: int) -> dict[str, Any]:
+    def create_edge_gateway(self, site_id: str, name: str, host: str, port: int, secret: str | None = None) -> dict[str, Any]:
+        if secret is None:
+            import secrets
+            secret = secrets.token_urlsafe(32)
         gateway_id = self._id("gw")
         with self._connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO edge_gateways(id, site_id, name, host, port, status)
-                    VALUES (%s, %s, %s, %s, %s, 'offline')
+                    INSERT INTO edge_gateways(id, site_id, name, host, port, status, provisioning_secret)
+                    VALUES (%s, %s, %s, %s, %s, 'offline', %s)
                     RETURNING *
                     """,
-                    (gateway_id, site_id, name, host, port),
+                    (gateway_id, site_id, name, host, port, secret),
                 )
                 return cur.fetchone()
+
+    def authenticate_edge_gateway(self, gateway_id: str, secret: str) -> dict[str, Any] | None:
+        from secrets import compare_digest
+        gateway = self.get_edge_gateway(gateway_id)
+        if not gateway:
+            return None
+        if not compare_digest(gateway["provisioning_secret"], secret):
+            return None
+        return gateway
 
     def list_edge_gateways(self, site_id: str) -> list[dict[str, Any]]:
         with self._connect() as conn:
@@ -820,19 +832,31 @@ class ControlRepository:
                 cur.execute("SELECT * FROM edge_gateways WHERE id = %s", (gateway_id,))
                 return cur.fetchone()
 
-    def update_edge_gateway_heartbeat(self, gateway_id: str) -> dict[str, Any] | None:
+    def update_edge_gateway_heartbeat(self, gateway_id: str, status_payload: dict[str, Any] | None = None) -> dict[str, Any] | None:
         with self._connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE edge_gateways
-                    SET status = 'online', last_seen_at = now(), updated_at = now()
-                    WHERE id = %s
-                    RETURNING *
-                    """,
-                    (gateway_id,),
-                )
+                if status_payload:
+                    cur.execute(
+                        """
+                        UPDATE edge_gateways
+                        SET last_seen_at = now(), status = %s, metadata = metadata || %s::jsonb
+                        WHERE id = %s
+                        RETURNING *
+                        """,
+                        (status_payload.get("status", "online"), Jsonb(status_payload), gateway_id),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        UPDATE edge_gateways
+                        SET last_seen_at = now(), status = 'online'
+                        WHERE id = %s
+                        RETURNING *
+                        """,
+                        (gateway_id,),
+                    )
                 return cur.fetchone()
+
 
     def update_edge_gateway_status(self, gateway_id: str, status: str) -> dict[str, Any] | None:
         with self._connect() as conn:

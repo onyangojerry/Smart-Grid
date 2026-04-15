@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSiteDevices, createSiteDevice, getSiteAssets, createAsset, deleteAsset } from "../../api/devices";
+import { 
+  getSiteDevices, createSiteDevice, getSiteAssets, createAsset, deleteAsset,
+  getDeviceMappings, createDeviceMapping, deleteDeviceMapping, createAssetDevice
+} from "../../api/devices";
 import { queryKeys } from "../../api/queryKeys";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Card } from "../../components/ui/Card";
@@ -11,6 +14,8 @@ import { ErrorBanner } from "../../components/ui/ErrorBanner";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { DeviceForm } from "../../components/forms/DeviceForm";
 import { AssetForm } from "../../components/forms/AssetForm";
+import { DeviceMappingForm } from "../../components/forms/DeviceMappingForm";
+import { AssetDeviceBindingForm } from "../../components/forms/AssetDeviceBindingForm";
 import { formatTimestamp } from "../../utils/time";
 import "../../styles/features.css";
 
@@ -19,6 +24,8 @@ export function DevicesPage() {
   const qc = useQueryClient();
   const [openCreateDevice, setOpenCreateDevice] = useState(false);
   const [openCreateAsset, setOpenCreateAsset] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const [bindingAssetId, setBindingAssetId] = useState<string | null>(null);
 
   if (!siteId) return <ErrorBanner error={new Error("Missing siteId")} />;
 
@@ -30,6 +37,12 @@ export function DevicesPage() {
   const assetsQuery = useQuery({
     queryKey: queryKeys.assets(siteId),
     queryFn: () => getSiteAssets(siteId)
+  });
+
+  const mappingsQuery = useQuery({
+    queryKey: ["device-mappings", selectedDeviceId],
+    queryFn: () => getDeviceMappings(selectedDeviceId!),
+    enabled: !!selectedDeviceId
   });
 
   const createDeviceMutation = useMutation({
@@ -52,6 +65,28 @@ export function DevicesPage() {
     mutationFn: deleteAsset,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.assets(siteId) });
+    }
+  });
+
+  const createMappingMutation = useMutation({
+    mutationFn: (body: any) => createDeviceMapping(selectedDeviceId!, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["device-mappings", selectedDeviceId] });
+    }
+  });
+
+  const deleteMappingMutation = useMutation({
+    mutationFn: deleteDeviceMapping,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["device-mappings", selectedDeviceId] });
+    }
+  });
+
+  const bindDeviceMutation = useMutation({
+    mutationFn: (deviceId: string) => createAssetDevice(bindingAssetId!, { device_id: deviceId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.assets(siteId) });
+      setBindingAssetId(null);
     }
   });
 
@@ -93,27 +128,50 @@ export function DevicesPage() {
           ) : !assetsQuery.data?.length ? (
             <EmptyState title="No assets found" description="Create your first asset to organize devices." />
           ) : (
-            <DataTable
-              rows={assetsQuery.data}
-              getRowKey={(a) => a.id}
-              columns={[
-                { key: "name", header: "Name", render: (a) => a.name },
-                { key: "type", header: "Type", render: (a) => a.asset_type },
-                { key: "created", header: "Added", render: (a) => formatTimestamp(a.created_at) },
-                { 
-                  key: "actions", 
-                  header: "", 
-                  render: (a) => (
-                    <button 
-                      onClick={() => deleteAssetMutation.mutate(a.id)} 
-                      style={{ color: "var(--error)", border: "none", background: "none", cursor: "pointer" }}
-                    >
-                      Delete
-                    </button>
-                  ) 
-                }
-              ]}
-            />
+            <>
+              <DataTable
+                rows={assetsQuery.data}
+                getRowKey={(a) => a.id}
+                columns={[
+                  { key: "name", header: "Name", render: (a) => a.name },
+                  { key: "type", header: "Type", render: (a) => a.asset_type },
+                  { key: "created", header: "Added", render: (a) => formatTimestamp(a.created_at) },
+                  { 
+                    key: "actions", 
+                    header: "", 
+                    render: (a) => (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button 
+                          onClick={() => setBindingAssetId(a.id)}
+                          style={{ color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}
+                        >
+                          Bind Device
+                        </button>
+                        <button 
+                          onClick={() => deleteAssetMutation.mutate(a.id)} 
+                          style={{ color: "var(--error)", border: "none", background: "none", cursor: "pointer" }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) 
+                  }
+                ]}
+              />
+              {bindingAssetId && (
+                <div style={{ marginTop: 16, padding: 16, border: "1px solid var(--border)", borderRadius: 8 }}>
+                  <div style={{ marginBottom: 12, fontWeight: 600 }}>Bind Device to {assetsQuery.data.find(a => a.id === bindingAssetId)?.name}</div>
+                  <AssetDeviceBindingForm 
+                    devices={devicesQuery.data || []} 
+                    onSubmit={(deviceId) => bindDeviceMutation.mutate(deviceId)}
+                    loading={bindDeviceMutation.isPending}
+                  />
+                  <button onClick={() => setBindingAssetId(null)} className="btn-icon" style={{ marginTop: 8, background: "none", color: "var(--text-muted)" }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </Card>
 
@@ -127,28 +185,72 @@ export function DevicesPage() {
               rows={devicesQuery.data}
               getRowKey={(d) => d.id}
               columns={[
-                { key: "id", header: "Device ID", render: (d) => d.id },
+                { key: "id", header: "Device ID", render: (d) => <code style={{ cursor: "pointer", color: "var(--primary)" }} onClick={() => setSelectedDeviceId(d.id)}>{d.id.slice(0, 8)}</code> },
                 { key: "type", header: "Type", render: (d) => d.device_type },
                 { key: "protocol", header: "Protocol", render: (d) => d.protocol },
-                { key: "created", header: "Added", render: (d) => formatTimestamp(d.created_at) }
+                { key: "created", header: "Added", render: (d) => formatTimestamp(d.created_at) },
+                {
+                  key: "mappings",
+                  header: "",
+                  render: (d) => (
+                    <button onClick={() => setSelectedDeviceId(d.id)} className="btn-icon">
+                      Mappings
+                    </button>
+                  )
+                }
               ]}
             />
           )}
         </Card>
-      </div>
 
-      <Card title="Advanced Configuration">
-        <div className="deferred-box">
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Available Advanced Features:</div>
-          <ul style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 4 }}>
-            <li>Direct Asset-Device assignment (Implemented)</li>
-            <li>Custom Canonical Key Mappings (Implemented)</li>
-          </ul>
-          <div style={{ marginTop: 12, fontSize: 13, color: "var(--text-muted)" }}>
-            UI for granular device-to-asset binding and field mapping is under development. Use the API directly for advanced scenarios.
-          </div>
-        </div>
-      </Card>
+        {selectedDeviceId && (
+          <Card title={`Field Mappings: ${selectedDeviceId.slice(0, 8)}`}>
+            <div style={{ display: "grid", gap: 20 }}>
+              <div style={{ background: "var(--bg-muted)", padding: 16, borderRadius: 8 }}>
+                <div style={{ marginBottom: 12, fontWeight: 600 }}>Add New Mapping</div>
+                <DeviceMappingForm 
+                  onSubmit={(body) => createMappingMutation.mutate(body)} 
+                  loading={createMappingMutation.isPending} 
+                />
+              </div>
+
+              {mappingsQuery.isLoading ? (
+                <LoadingSpinner />
+              ) : mappingsQuery.data?.items?.length ? (
+                <DataTable
+                  rows={mappingsQuery.data.items}
+                  getRowKey={(m) => m.id}
+                  columns={[
+                    { key: "canonical", header: "Canonical Key", render: (m) => <code>{m.canonical_key}</code> },
+                    { key: "source", header: "Source Key", render: (m) => m.source_key },
+                    { key: "addr", header: "Address", render: (m) => m.register_address },
+                    { key: "type", header: "Type", render: (m) => m.value_type },
+                    { key: "unit", header: "Unit", render: (m) => m.unit || "-" },
+                    {
+                      key: "actions",
+                      header: "",
+                      render: (m) => (
+                        <button 
+                          onClick={() => deleteMappingMutation.mutate(m.id)} 
+                          style={{ color: "var(--error)", border: "none", background: "none", cursor: "pointer" }}
+                        >
+                          Remove
+                        </button>
+                      )
+                    }
+                  ]}
+                />
+              ) : (
+                <EmptyState title="No mappings defined" description="Add field mappings to decode Modbus data." />
+              )}
+              
+              <button onClick={() => setSelectedDeviceId(null)} className="btn-icon" style={{ justifySelf: "start" }}>
+                Close Mappings
+              </button>
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

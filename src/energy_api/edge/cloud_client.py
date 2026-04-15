@@ -29,9 +29,13 @@ class EdgeCloudClient:
         if api_key:
             headers["X-API-Key"] = api_key
             self.auth_mode = "api_key"
+            logger.info("EdgeCloudClient initialized with API key auth: base_url=%s", self.base_url)
         elif bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
             self.auth_mode = "bearer"
+            logger.info("EdgeCloudClient initialized with bearer auth: base_url=%s", self.base_url)
+        else:
+            logger.warning("EdgeCloudClient initialized with NO auth: base_url=%s", self.base_url)
         self._client = httpx.Client(base_url=self.base_url, timeout=timeout_seconds, headers=headers)
 
     def upload_record(self, site_id: str, gateway_id: str, payload: dict[str, Any]) -> dict[str, Any]:

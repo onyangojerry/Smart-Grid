@@ -40,3 +40,9 @@ export const createDeviceMapping = (deviceId: string, body: Record<string, unkno
     method: "POST",
     body: JSON.stringify(body)
   });
+
+export const getDeviceMappings = (deviceId: string) =>
+  apiFetch<{ items: any[] }>(`/api/v1/devices/${deviceId}/mappings`);
+
+export const deleteDeviceMapping = (mappingId: string) =>
+  apiFetch<void>(`/api/v1/mappings/${mappingId}`, { method: "DELETE" });

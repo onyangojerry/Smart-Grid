@@ -15,6 +15,7 @@ export function OptimizationForm({ onSubmit, loading }: Props) {
 
   return (
     <form
+      className="auth-form"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit({
@@ -25,21 +26,38 @@ export function OptimizationForm({ onSubmit, loading }: Props) {
           reserve_soc_min: reserveSocMin
         });
       }}
-      style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(5,minmax(120px,1fr))" }}
+      style={{ maxWidth: 800 }}
     >
-      <select value={mode} onChange={(e) => setMode(e.target.value as "live" | "simulation" | "backtest")}>
-        <option value="live">live</option>
-        <option value="simulation">simulation</option>
-        <option value="backtest">backtest</option>
-      </select>
-      <input type="number" value={horizon} onChange={(e) => setHorizon(Number(e.target.value))} />
-      <input type="number" value={step} onChange={(e) => setStep(Number(e.target.value))} />
-      <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <input type="checkbox" checked={allowExport} onChange={(e) => setAllowExport(e.target.checked)} />allow export
-      </label>
-      <input type="number" value={reserveSocMin} onChange={(e) => setReserveSocMin(Number(e.target.value))} />
-      <button disabled={loading} type="submit" style={{ gridColumn: "span 5" }}>
-        {loading ? "Running..." : "Run optimization"}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+        <div className="form-group">
+          <label className="form-label">Mode</label>
+          <select className="form-input" value={mode} onChange={(e) => setMode(e.target.value as "live" | "simulation" | "backtest")}>
+            <option value="live">Live Execution</option>
+            <option value="simulation">Simulation</option>
+            <option value="backtest">Backtest</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Horizon (Minutes)</label>
+          <input className="form-input" type="number" value={horizon} onChange={(e) => setHorizon(Number(e.target.value))} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Step (Minutes)</label>
+          <input className="form-input" type="number" value={step} onChange={(e) => setStep(Number(e.target.value))} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Reserve SOC (%)</label>
+          <input className="form-input" type="number" value={reserveSocMin} onChange={(e) => setReserveSocMin(Number(e.target.value))} />
+        </div>
+        <div className="form-group" style={{ display: "flex", alignItems: "center", paddingTop: 24 }}>
+          <label style={{ display: "flex", gap: 12, alignItems: "center", cursor: "pointer", fontWeight: 600 }}>
+            <input type="checkbox" style={{ width: 20, height: 20 }} checked={allowExport} onChange={(e) => setAllowExport(e.target.checked)} />
+            Allow Export
+          </label>
+        </div>
+      </div>
+      <button className="btn btn-primary btn-lg" disabled={loading} type="submit" style={{ marginTop: 16 }}>
+        {loading ? "Running..." : "Execute Smart Logic"}
       </button>
     </form>
   );

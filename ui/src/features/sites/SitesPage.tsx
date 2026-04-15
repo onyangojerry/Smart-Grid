@@ -34,7 +34,17 @@ export function SitesPage() {
   const rows = sitesQuery.data || [];
   return (
     <div className="page-content">
-      <PageHeader title="Sites" right={<button onClick={() => setOpenCreate((v) => !v)} className="btn-icon">{openCreate ? "Close" : "New site"}</button>} />
+      <PageHeader 
+        title="Active Sites" 
+        right={
+          <button 
+            onClick={() => setOpenCreate((v) => !v)} 
+            className={`btn ${openCreate ? "btn-secondary" : "btn-primary"}`}
+          >
+            {openCreate ? "Cancel" : "Add New Site"}
+          </button>
+        } 
+      />
       {openCreate ? (
         <Card title="Create site">
           <SiteForm onSubmit={(body) => createMutation.mutate(body)} loading={createMutation.isPending} />

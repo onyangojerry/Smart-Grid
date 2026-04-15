@@ -1,94 +1,76 @@
 import React from "react";
-import { useRouteError, useNavigate, isRouteErrorResponse } from "react-router-dom";
-import { Topbar } from "./Topbar";
-import "../../styles/layout.css";
+import { useNavigate, useRouteError } from "react-router-dom";
 
 export function ErrorPage() {
-  const error = useRouteError();
+  const error = useRouteError() as any; // Type assertion for simplicity; in a real app, you'd want a more robust type
   const navigate = useNavigate();
 
-  let errorMessage: string;
-  let errorStatus: number | string = "Error";
+  const handleGoHome = () => {
+    navigate("/");
+  };
 
-  if (isRouteErrorResponse(error)) {
-    errorMessage = error.statusText || error.data?.message || "Page not found";
-    errorStatus = error.status;
-  } else if (error instanceof Error) {
-    errorMessage = error.message;
-  } else if (typeof error === "string") {
-    errorMessage = error;
-  } else {
-    console.error(error);
-    errorMessage = "An unexpected error occurred.";
-  }
+  const containerStyle: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "100vh",
+    backgroundColor: "#f8f9fa", /* Light background */
+    color: "#333",
+    textAlign: "center",
+    padding: "20px",
+    boxSizing: "border-box",
+  };
+
+  const contentStyle: React.CSSProperties = {
+    maxWidth: "600px",
+    backgroundColor: "#ffffff",
+    padding: "40px",
+    borderRadius: "8px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: "2.5em",
+    marginBottom: "15px",
+    color: "#dc3545", /* Red for error */
+  };
+
+  const messageStyle: React.CSSProperties = {
+    fontSize: "1.2em",
+    marginBottom: "10px",
+  };
+
+  const detailsStyle: React.CSSProperties = {
+    fontSize: "0.9em",
+    color: "#6c757d", /* Muted text for details */
+    marginBottom: "30px",
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    padding: "12px 25px",
+    fontSize: "1em",
+    borderRadius: "5px",
+    cursor: "pointer",
+    transition: "background-color 0.3s ease",
+    backgroundColor: "#007bff", /* Primary blue */
+    color: "white",
+    border: "none",
+  };
 
   return (
-    <div className="app-shell" style={{ flexDirection: "column" }}>
-      <Topbar />
-      <main className="page-container" style={{ display: "grid", placeItems: "center", minHeight: "calc(100vh - 56px)" }}>
-        <div className="error-page-card">
-          <div className="error-page-icon">⚠️</div>
-          <h1 className="error-page-title">{errorStatus}</h1>
-          <p className="error-page-message">{errorMessage}</p>
-          {import.meta.env.DEV && error instanceof Error && error.stack && (
-            <pre className="error-page-stack">{error.stack}</pre>
-          )}
-          <div className="error-page-actions">
-            <button onClick={() => navigate(-1)} className="btn-secondary">
-              ← Go Back
-            </button>
-            <button onClick={() => navigate("/")} className="btn-primary">
-              Return Home
-            </button>
-          </div>
-        </div>
-      </main>
-      <style>{`
-        .error-page-card {
-          max-width: 600px;
-          width: 100%;
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          padding: 40px;
-          text-align: center;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-        .error-page-icon {
-          font-size: 48px;
-          margin-bottom: 20px;
-        }
-        .error-page-title {
-          font-family: var(--syne);
-          font-size: 32px;
-          font-weight: 800;
-          margin: 0 0 12px 0;
-          color: var(--error);
-        }
-        .error-page-message {
-          font-size: 18px;
-          color: var(--text);
-          margin-bottom: 30px;
-          line-height: 1.6;
-        }
-        .error-page-stack {
-          text-align: left;
-          background: rgba(0,0,0,0.05);
-          padding: 16px;
-          border-radius: 8px;
-          font-size: 12px;
-          font-family: var(--mono);
-          overflow-x: auto;
-          margin-bottom: 30px;
-          max-height: 200px;
-          border: 1px solid var(--border);
-        }
-        .error-page-actions {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-        }
-      `}</style>
+    <div style={containerStyle}>
+      <div style={contentStyle}>
+        <h1 style={titleStyle}>Oops! Something went wrong.</h1>
+        <p style={messageStyle}>
+          {error?.statusText || error?.message || "An unexpected error occurred."}
+        </p>
+        <p style={detailsStyle}>
+          {error?.status && `Status: ${error.status}`}
+        </p>
+        <button onClick={handleGoHome} style={buttonStyle}>
+          Go back to Homepage
+        </button>
+      </div>
     </div>
   );
 }

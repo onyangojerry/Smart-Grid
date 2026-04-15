@@ -2,7 +2,8 @@
 # Contribution: Executes supported edge commands and applies explicit per-command reconciliation rules against device readback.
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import time
 from typing import Any, Literal
 
 from .device_profiles import DeviceProfile
@@ -29,10 +30,15 @@ class CommandExecutor:
     unit_id: int = 1
     profile: DeviceProfile | None = None
     allow_writes: bool = True
+    max_writes_per_minute: int = 60
+    _write_history: list[float] = field(default_factory=list)
 
     def execute_and_reconcile(self, payload: dict[str, Any]) -> tuple[bool, str]:
         command_type = self._command_type(payload)
         canonical = self._canonical_command(command_type)
+
+        if not self._check_circuit_breaker():
+            return False, "circuit_breaker_active:too_many_writes"
 
         if self.profile is not None:
             point = self.profile.command_for(canonical)
@@ -42,30 +48,45 @@ class CommandExecutor:
                 return False, f"unsupported_command_for_profile:{canonical}"
             if not self.allow_writes:
                 return False, "writes_disabled_read_only_mode"
+            
+            self._record_write()
             self._apply_profile_command(point, payload)
             return self._reconcile_profile_command(point, payload), f"reconciled_{point.verify_mode}"
 
         if command_type in {"charge", "discharge"}:
+            self._record_write()
             self._apply_charge_discharge(command_type, payload)
             ok = self._reconcile_charge_discharge(command_type, payload)
             return ok, "reconciled_power_or_setpoint"
 
         if command_type == "idle":
+            self._record_write()
             self._apply_idle(payload)
             ok = self._reconcile_idle(payload)
             return ok, "reconciled_near_zero_power"
 
         if command_type == "set_limit":
+            self._record_write()
             self._apply_set_limit(payload)
             ok = self._reconcile_set_limit(payload)
             return ok, "reconciled_limit_readback"
 
         if command_type == "set_mode":
+            self._record_write()
             self._apply_set_mode(payload)
             ok = self._reconcile_set_mode(payload)
             return ok, "reconciled_mode_readback"
 
         return False, "unsupported_command"
+
+    def _check_circuit_breaker(self) -> bool:
+        now = time.time()
+        # Keep only writes from the last 60 seconds
+        self._write_history = [t for t in self._write_history if now - t < 60]
+        return len(self._write_history) < self.max_writes_per_minute
+
+    def _record_write(self) -> None:
+        self._write_history.append(time.time())
 
     def reconcile_only(self, payload: dict[str, Any]) -> tuple[bool, str]:
         command_type = self._command_type(payload)

@@ -1,5 +1,8 @@
 # Author: Jerry Onyango
 # Contribution: Exposes the FastAPI app object for package-level imports.
-from .main import app
+try:
+    from .main import app
+except ImportError:
+    app = None  # type: ignore
 
 __all__ = ["app"]

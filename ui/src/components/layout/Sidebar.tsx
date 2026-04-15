@@ -4,7 +4,7 @@ import { useAuth } from "../../features/auth/useAuth";
 import { 
   Settings, LogOut, LayoutDashboard, MapPin, Cpu, 
   Activity, Zap, Terminal, PiggyBank, PlayCircle, Bell, TrendingUp,
-  Users
+  Users, Server, Building
 } from "lucide-react";
 
 export function Sidebar() {
@@ -17,18 +17,19 @@ export function Sidebar() {
 
   const links = siteId
     ? [
-        { to: "/sites", label: "Sites", icon: MapPin },
-        { to: `/sites/${siteId}`, label: "Dashboard", icon: LayoutDashboard },
-        { to: `/sites/${siteId}/devices`, label: "Devices", icon: Cpu },
-        { to: `/sites/${siteId}/telemetry`, label: "Telemetry", icon: Activity },
-        { to: `/sites/${siteId}/optimization`, label: "Optimization", icon: Zap },
-        { to: `/sites/${siteId}/commands`, label: "Commands", icon: Terminal },
-        { to: `/sites/${siteId}/savings`, label: "Savings", icon: PiggyBank },
-        { to: `/sites/${siteId}/simulation`, label: "Simulation", icon: PlayCircle },
-        { to: `/sites/${siteId}/alerts`, label: "Alerts", icon: Bell },
-        { to: `/sites/${siteId}/roi`, label: "ROI Calculator", icon: TrendingUp }
+        { to: "/sites", label: "Active Sites", icon: MapPin },
+        { to: `/sites/${siteId}`, label: "Site Overview", icon: Building },
+        { to: `/sites/${siteId}/savings`, label: "Impact & Savings", icon: PiggyBank },
+        { to: `/sites/${siteId}/optimization`, label: "Smart Logic", icon: Zap },
+        { to: `/sites/${siteId}/simulation`, label: "Future Vision", icon: PlayCircle },
+        { to: `/sites/${siteId}/telemetry`, label: "System Vitality", icon: Activity },
+        { to: `/sites/${siteId}/alerts`, label: "Health Alerts", icon: Bell },
+        { to: `/sites/${siteId}/devices`, label: "Asset Management", icon: Cpu },
+        { to: `/sites/${siteId}/commands`, label: "Precision Dispatch", icon: Terminal },
+        { to: `/sites/${siteId}/roi`, label: "ROI Stories", icon: TrendingUp },
+        { to: `/sites/${siteId}/edge`, label: "Edge Gateway", icon: Server }
       ]
-    : [{ to: "/sites", label: "Sites", icon: MapPin }];
+    : [{ to: "/sites", label: "Active Sites", icon: MapPin }];
 
   const [showUserMenu, setShowUserMenu] = React.useState(false);
 

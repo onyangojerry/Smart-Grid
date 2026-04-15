@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { Site, SiteCreateBody } from "../types";
+import type { Site, SiteCreateBody, SiteDashboard } from "../types";
 
 export const getSites = async () => {
   const response = await apiFetch<{ items: Site[] } | Site[]>("/api/v1/sites");
@@ -19,3 +19,6 @@ export const patchSite = (siteId: string, body: Partial<Record<string, unknown>>
     method: "PATCH",
     body: JSON.stringify(body)
   });
+
+export const getSiteDashboard = (siteId: string) =>
+  apiFetch<SiteDashboard>(`/api/v1/sites/${siteId}/dashboard`);

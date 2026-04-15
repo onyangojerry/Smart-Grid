@@ -11,33 +11,31 @@
 }
 
 .sidebar {
-  width: 230px;
-  border-right: 1px solid var(--border);
-  padding: 12px;
+  width: 260px;
+  background: var(--sidebar-bg);
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
-  background: var(--card-bg);
   height: calc(100vh - 56px);
   flex-shrink: 0;
   overflow-y: auto;
+  color: white;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding-right: 4px;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 8px 12px;
   margin-bottom: 4px;
   text-decoration: none;
-  color: var(--text-muted);
-  background: var(--bg);
-  border: 1px solid transparent;
-  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  border-radius: var(--radius);
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
@@ -45,40 +43,38 @@
 }
 
 .nav-link:hover {
-  color: var(--text);
-  background: var(--border);
-  border-color: var(--border);
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
   text-decoration: none;
 }
 
 .nav-link.active {
-  color: var(--primary);
-  background: var(--card-bg);
-  border-color: var(--primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: white;
+  background: var(--primary);
+  box-shadow: var(--glow);
   font-weight: 600;
 }
 
 .sidebar-footer {
   margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
 }
 
 .sidebar-user-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
+  gap: 12px;
+  padding: 12px;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--radius);
   transition: background 0.2s;
-  position: relative;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .sidebar-user-trigger:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-user-details {
@@ -87,17 +83,17 @@
 }
 
 .user-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  color: white;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .user-email {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -105,43 +101,34 @@
 
 .chevron-icon {
   font-size: 12px;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
   transition: transform 0.2s;
-}
-
-.chevron-icon.open {
-  transform: rotate(180deg);
 }
 
 .sidebar-user-dropdown {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 12px);
   left: 0;
   right: 0;
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-  padding: 4px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 8px;
   z-index: 100;
-  animation: slideUp 0.2s ease;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  color: var(--text);
 }
 
 .sidebar-dropdown-item {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 10px 12px;
   background: transparent;
   border: none;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 14px;
   color: var(--text);
   cursor: pointer;
   text-align: left;
@@ -149,121 +136,75 @@
 }
 
 .sidebar-dropdown-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg);
 }
 
 .sidebar-dropdown-item.logout {
-  color: #dc2626;
+  color: var(--error);
 }
 
 .sidebar-dropdown-item.logout:hover {
-  background: #fef2f2;
-}
-
-.sidebar-dropdown-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 4px;
-}
-
-.item-icon {
-  font-size: 14px;
+  background: var(--success-bg);
+  color: var(--error);
 }
 
 .topbar {
-  height: 56px;
+  height: 64px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  background: var(--card-bg);
+  padding: 0 24px;
+  background: var(--topbar-bg);
   width: 100%;
   position: sticky;
   top: 0;
   z-index: 50;
-  flex-shrink: 0;
-}
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.topbar-logo {
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.topbar-logo-icon {
-  font-size: 24px;
 }
 
 .topbar-logo-text {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
   color: var(--text);
-  font-family: var(--syne);
+  font-family: var(--font-serif);
 }
 
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .theme-switcher {
   display: flex;
   gap: 4px;
-  background: var(--bg);
+  background: rgba(0, 0, 0, 0.05);
   padding: 4px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
+  border-radius: 100px;
 }
 
 .theme-button {
-  padding: 4px 8px;
+  padding: 4px 12px;
   font-size: 11px;
-  border-radius: 4px;
+  font-weight: 700;
+  border-radius: 100px;
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .theme-button.active {
-  background: var(--card-bg);
+  background: white;
   color: var(--primary);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .auth-nav {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.login-link-btn {
-  background: transparent;
-  border: none;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.signup-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
+  gap: 12px;
 }
 
 .user-profile-container {
@@ -273,30 +214,33 @@
 }
 
 .user-avatar-trigger {
+  position: relative;
   cursor: pointer;
-  padding: 4px;
 }
 
 .user-avatar-img {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 2px solid var(--border);
-  background: var(--bg);
-  object-fit: cover;
-  display: block;
+  transition: border-color 0.2s;
+}
+
+.user-avatar-img:hover {
+  border-color: var(--primary);
 }
 
 .user-dropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  width: 200px;
+  width: 220px;
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 8px 0;
+  margin-top: 12px;
   opacity: 0;
   visibility: hidden;
   transform: translateY(10px);
@@ -307,15 +251,15 @@
 .user-avatar-trigger:hover .user-dropdown {
   opacity: 1;
   visibility: visible;
-  transform: translateY(4px);
+  transform: translateY(0);
 }
 
 .user-dropdown-info {
-  padding: 8px 16px;
+  padding: 12px 16px;
 }
 
 .user-dropdown-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   color: var(--text);
 }
@@ -323,48 +267,43 @@
 .user-dropdown-email {
   font-size: 12px;
   color: var(--text-muted);
-  word-break: break-all;
 }
 
 .user-dropdown-role {
-  font-size: 11px;
-  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  font-weight: 700;
+  color: var(--primary);
   margin-top: 4px;
+  letter-spacing: 0.05em;
 }
 
 .user-dropdown-divider {
   height: 1px;
   background: var(--border);
-  margin: 8px 0;
+  margin: 4px 0;
 }
 
 .user-dropdown-logout {
   width: 100%;
   text-align: left;
-  padding: 8px 16px;
+  padding: 10px 16px;
   background: transparent;
   border: none;
   font-size: 14px;
-  color: #dc2626;
+  font-weight: 600;
+  color: var(--error);
   cursor: pointer;
-  transition: background 0.2s;
 }
 
 .user-dropdown-logout:hover {
-  background: #fef2f2;
-}
-
-@media (max-width: 600px) {
-  .user-dropdown {
-    right: -8px;
-  }
+  background: var(--success-bg);
 }
 
 .page-container {
   flex: 1;
-  padding: 20px;
+  padding: 32px;
   overflow-y: auto;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 64px);
+  background: var(--bg);
 }

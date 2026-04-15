@@ -8,5 +8,3 @@ export const getSavingsSummary = (siteId: string, from?: string, to?: string) =>
       ...(to ? { to } : {})
     }
   });
-
-export const getSiteDashboard = (siteId: string) => apiFetch<Record<string, unknown>>(`/api/v1/sites/${siteId}/dashboard`);

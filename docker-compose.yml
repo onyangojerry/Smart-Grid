@@ -26,6 +26,8 @@ services:
     container_name: energyallocation-api
     env_file:
       - .env.example
+    environment:
+      EA_SERVICE_KEYS: "ops-key:svc_ops:ops_admin:,ml-key:svc_ml:ml_engineer:"
     depends_on:
       postgres:
         condition: service_healthy
