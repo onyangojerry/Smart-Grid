@@ -35,13 +35,13 @@ export function SitesPage() {
   return (
     <div className="page-content">
       <PageHeader 
-        title="My Homes" 
+        title="Active Sites" 
         right={
           <button 
             onClick={() => setOpenCreate((v) => !v)} 
             className={`btn ${openCreate ? "btn-secondary" : "btn-primary"}`}
           >
-            {openCreate ? "Cancel" : "Add New Home"}
+            {openCreate ? "Cancel" : "Add New Site"}
           </button>
         } 
       />

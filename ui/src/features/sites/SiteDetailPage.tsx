@@ -36,8 +36,8 @@ export function SiteDetailPage() {
     <div className="page-content">
       <div style={{ marginBottom: 24 }}>
         <PageHeader 
-          title={`Hello, ${site.name || "Home"}`} 
-          subtitle="Your energy system is breathing and working for you." 
+          title={site.name || "Site Overview"} 
+          subtitle="System intelligence is active and optimizing your energy flow." 
         />
       </div>
 
@@ -45,13 +45,13 @@ export function SiteDetailPage() {
       <div className="stats-grid">
         <div className="stat-card" style={{ borderColor: "var(--primary)" }}>
           <div className="stat-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <PiggyBank size={16} /> Monthly Impact
+            <PiggyBank size={16} /> Financial Impact
           </div>
           <div className="stat-value">
             {savings ? `$${(savings.baseline_cost - savings.optimized_cost).toFixed(2)}` : "$0.00"}
           </div>
           <div className="stat-text" style={{ fontSize: 13, color: "var(--success)", fontWeight: 700, marginTop: 8 }}>
-            {savings ? `${savings.savings_percent.toFixed(1)}% saved so far` : "Calculating..."}
+            {savings ? `${savings.savings_percent.toFixed(1)}% optimization gain` : "Calculating impact..."}
           </div>
         </div>
 

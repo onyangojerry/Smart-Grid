@@ -12,7 +12,7 @@ type DataTableProps<T> = {
   getRowKey: (row: T) => string;
 };
 
-export function DataTable<T>({ rows, columns, getRowKey }: DataTableProps<T>) {
+export function DataTable<T>({ rows = [], columns, getRowKey }: DataTableProps<T>) {
   return (
     <div className="data-table-container">
       <table className="data-table">
@@ -24,7 +24,7 @@ export function DataTable<T>({ rows, columns, getRowKey }: DataTableProps<T>) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {(rows || []).map((row) => (
             <tr key={getRowKey(row)}>
               {columns.map((col) => (
                 <td key={col.key}>{col.render(row)}</td>

@@ -30,7 +30,7 @@ export function SiteForm({ onSubmit, loading }: Props) {
         <input 
           className="form-input"
           required 
-          placeholder="e.g. My Sunny Home" 
+          placeholder="e.g. West Facility or Main Residence" 
           value={name} 
           onChange={(e) => setName(e.target.value)} 
         />
@@ -46,7 +46,7 @@ export function SiteForm({ onSubmit, loading }: Props) {
         />
       </div>
       <button className="btn btn-primary" disabled={loading} type="submit" style={{ marginTop: 8 }}>
-        {loading ? "Creating..." : "Create My Home"}
+        {loading ? "Creating..." : "Add New Site"}
       </button>
     </form>
   );

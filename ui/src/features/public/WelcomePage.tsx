@@ -14,10 +14,10 @@ export function WelcomePage() {
         {/* Hero Section */}
         <section className="hero-section">
           <h1 className="hero-title">
-            Your home, <span className="hero-title-accent">breathing</span> with the grid.
+            Your energy, <span className="hero-title-accent">breathing</span> with the grid.
           </h1>
           <p className="hero-subtitle">
-            While you sleep, our silent intelligence is working to lower your bills and protect the planet. Experience the magic of autonomous energy.
+            Whether a smart home or an industrial facility, our silent intelligence works to lower your costs and protect the planet. Experience the power of autonomous energy management.
           </p>
           <div className="hero-actions">
             <button 
@@ -30,7 +30,7 @@ export function WelcomePage() {
               onClick={() => navigate("/login")}
               className="btn btn-secondary btn-lg"
             >
-              Member Login
+              Operator Login
             </button>
           </div>
         </section>
@@ -39,36 +39,36 @@ export function WelcomePage() {
         <section className="feature-grid">
           <div className="feature-card">
             <div className="feature-icon">🌿</div>
-            <h3 className="feature-title">Eco-Intelligence</h3>
+            <h3 className="feature-title">Impact-First Intelligence</h3>
             <p className="feature-text">
-              We don't just move electrons; we optimize for a greener future. Our algorithms prioritize clean energy when the sun is shining.
+              We don't just move electrons; we optimize for a greener future. Our algorithms prioritize clean energy and system health, whether at home or in industry.
             </p>
           </div>
           <div className="feature-card">
-            <div className="feature-icon">💰</div>
-            <h3 className="feature-title">Silent Savings</h3>
+            <div className="feature-icon">📊</div>
+            <h3 className="feature-title">Precision Savings</h3>
             <p className="feature-text">
-              Our system tracks market prices in real-time, automatically shifting your usage to avoid expensive peak rates without you lifting a finger.
+              Our system tracks market prices in real-time, automatically shifting loads to avoid expensive peak rates and maximizing your ROI without any manual effort.
             </p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">🛡️</div>
-            <h3 className="feature-title">Total Peace of Mind</h3>
+            <h3 className="feature-title">Industrial-Grade Safety</h3>
             <p className="feature-text">
-              Industrial-grade safety meets home comfort. Your hardware is protected by smart constraints that ensure long-lasting battery health.
+              Advanced reliability meets operational comfort. Your hardware is protected by smart constraints that ensure long-lasting battery health and uptime.
             </p>
           </div>
         </section>
 
         {/* The "How it Works" Story */}
         <section className="technical-section">
-          <h2 className="technical-title">The Journey of a Smart Electron</h2>
+          <h2 className="technical-title">The Journey of Smart Energy</h2>
           <div className="technical-grid">
             {[
-              { step: "01", title: "Listen", desc: "We listen to your home's heartbeat—PV, battery, and load." },
-              { step: "02", title: "Analyze", desc: "Our AI weighs thousands of possibilities to find your best path." },
-              { step: "03", title: "Act", desc: "We gently guide your system to store or use energy at the perfect time." },
-              { step: "04", title: "Impact", desc: "You wake up to lower costs and a smaller carbon footprint." }
+              { step: "01", title: "Monitor", desc: "We ingest your system's heartbeat—PV, battery, and load—at high frequency." },
+              { step: "02", title: "Analyze", desc: "Our AI evaluates thousands of possibilities to find your most efficient path." },
+              { step: "03", title: "Act", desc: "We gently guide your assets to store or dispatch energy at the optimal time." },
+              { step: "04", title: "Impact", desc: "You achieve lower costs, reduced peak demand, and a smaller carbon footprint." }
             ].map((s) => (
               <div key={s.step} className="step-container">
                 <div className="step-number">{s.step}</div>
