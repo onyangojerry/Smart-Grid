@@ -7,7 +7,6 @@ import threading
 import time
 from typing import Any, Iterable
 
-from pymodbus.constants import ExcCodes
 from pymodbus.server import StartAsyncTcpServer
 from pymodbus.simulator import SimData, SimDevice, DataType
 
@@ -43,19 +42,33 @@ class SimulatedModbusDevice:
         count: int,
         current_registers: list[int],
         set_values: list[int] | list[bool] | None,
-    ) -> None | ExcCodes:
+    ) -> None:
         if self.disconnect_enabled:
             raise ConnectionResetError("simulated disconnect")
         if self.timeout_enabled:
-            time.sleep(self.timeout_seconds)
+            await asyncio.sleep(self.timeout_seconds)
 
-        if set_values is not None and not self.frozen_values_enabled:
-            for i, val in enumerate(set_values):
-                self._values[address + i] = val & 0xFFFF
+        if set_values is not None:
+            if not self.frozen_values_enabled:
+                for i, val in enumerate(set_values):
+                    v = int(val) & 0xFFFF
+                    self._values[address + i] = v
+                    if address + i < len(self._simdata.values):
+                        self._simdata.values[address + i] = v
+            return None
 
+        # READ
         if self.bad_data_enabled:
-            return ExcCodes.ILLEGAL_DATA_VALUE
+            for i in range(count):
+                current_registers[i] = self.bad_data_value
+            return None
 
+        if not self.frozen_values_enabled:
+            for i in range(count):
+                reg_addr = address + i
+                if reg_addr in self._values:
+                    current_registers[i] = self._values[reg_addr]
+        
         return None
 
     def start(self) -> None:
@@ -77,11 +90,19 @@ class SimulatedModbusDevice:
                 self.set_holding_registers(address, list(value))
 
     def set_holding_register(self, address: int, value: int) -> None:
-        self._values[address] = value & 0xFFFF
+        val = value & 0xFFFF
+        self._values[address] = val
+        if not self.frozen_values_enabled:
+            if address < len(self._simdata.values):
+                self._simdata.values[address] = val
 
     def set_holding_registers(self, address: int, values: list[int]) -> None:
         for i, v in enumerate(values):
-            self._values[address + i] = int(v) & 0xFFFF
+            val = int(v) & 0xFFFF
+            self._values[address + i] = val
+            if not self.frozen_values_enabled:
+                if address + i < len(self._simdata.values):
+                    self._simdata.values[address + i] = val
 
     def inject_timeout(self, enabled: bool, timeout_seconds: float | None = None) -> None:
         self.timeout_enabled = enabled
