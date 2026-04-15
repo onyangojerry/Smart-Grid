@@ -42,13 +42,17 @@ class SimulatedModbusDevice:
         count: int,
         current_registers: list[int],
         set_values: list[int] | list[bool] | None,
-    ) -> None:
+    ) -> Any:
         if self.disconnect_enabled:
+            # Simulate a hard disconnect by raising an error that pymodbus will catch or let propagate to the transport
             raise ConnectionResetError("simulated disconnect")
+        
         if self.timeout_enabled:
+            # Simulate a timeout by delaying the response
             await asyncio.sleep(self.timeout_seconds)
 
         if set_values is not None:
+            # This is a WRITE operation
             if not self.frozen_values_enabled:
                 for i, val in enumerate(set_values):
                     v = int(val) & 0xFFFF
@@ -57,17 +61,28 @@ class SimulatedModbusDevice:
                         self._simdata.values[address + i] = v
             return None
 
-        # READ
+        # This is a READ operation
         if self.bad_data_enabled:
+            # Return garbage data but with a SUCCESSFUL Modbus response
+            # We modify the registers slice in-place if possible, but also return a list to be sure
+            garbage = [self.bad_data_value] * count
             for i in range(count):
-                current_registers[i] = self.bad_data_value
+                current_registers[i] = garbage[i]
+            return garbage
+
+        if self.frozen_values_enabled:
+            # Return None to let pymodbus use whatever is currently in self._simdata.values
+            # which we stop updating in set_holding_register when frozen_values_enabled is True
             return None
 
-        if not self.frozen_values_enabled:
-            for i in range(count):
-                reg_addr = address + i
-                if reg_addr in self._values:
-                    current_registers[i] = self._values[reg_addr]
+        # Normal read: Sync datastore with our internal values before returning
+        for i in range(count):
+            reg_addr = address + i
+            if reg_addr in self._values:
+                val = self._values[reg_addr]
+                current_registers[i] = val
+                if reg_addr < len(self._simdata.values):
+                    self._simdata.values[reg_addr] = val
         
         return None
 
