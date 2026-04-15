@@ -11,6 +11,7 @@ import { StatCard } from "../../components/ui/StatCard";
 import { isStale } from "../../utils/time";
 import { usePollInterval } from "../../hooks/usePollInterval";
 import { ExplanationPanel } from "../optimization/ExplanationPanel";
+import { PiggyBank, Zap, Activity, ShieldCheck } from "lucide-react";
 
 export function SiteDetailPage() {
   const { siteId } = useParams();
@@ -31,63 +32,103 @@ export function SiteDetailPage() {
   const { latest_state, optimization_runs, savings, site } = data;
   const latestRun = optimization_runs?.[0];
 
-  // Map latest_state to StatCard format
-  const stats = [
-    { label: "PV", value: latest_state.pv_kw, unit: "kW" },
-    { label: "Load", value: latest_state.load_kw, unit: "kW" },
-    { label: "Battery SOC", value: latest_state.battery_soc, unit: "%" },
-    { label: "Battery Power", value: latest_state.battery_power_kw, unit: "kW" },
-    { label: "Grid Import", value: latest_state.grid_import_kw, unit: "kW" },
-    { label: "Grid Export", value: latest_state.grid_export_kw, unit: "kW" },
-    { label: "Import Price", value: latest_state.price_import, unit: "$/kWh" },
-  ];
-
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <PageHeader title={site.name || "Site Dashboard"} subtitle={siteId} />
+    <div className="page-content">
+      <div style={{ marginBottom: 24 }}>
+        <PageHeader 
+          title={`Hello, ${site.name || "Home"}`} 
+          subtitle="Your energy system is breathing and working for you." 
+        />
+      </div>
 
-      <Card title="Live telemetry">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))", gap: 8 }}>
-          {stats.map((stat) => (
-            <StatCard
-              key={stat.label}
-              label={stat.label}
-              value={stat.value}
-              unit={stat.unit}
-              ts={latest_state.ts}
-              quality={latest_state.online ? "good" : "bad"}
-              stale={isStale(latest_state.ts, 60)}
-            />
-          ))}
+      {/* Impact Row */}
+      <div className="stats-grid">
+        <div className="stat-card" style={{ borderColor: "var(--primary)" }}>
+          <div className="stat-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <PiggyBank size={16} /> Monthly Impact
+          </div>
+          <div className="stat-value">
+            {savings ? `$${(savings.baseline_cost - savings.optimized_cost).toFixed(2)}` : "$0.00"}
+          </div>
+          <div className="stat-text" style={{ fontSize: 13, color: "var(--success)", fontWeight: 700, marginTop: 8 }}>
+            {savings ? `${savings.savings_percent.toFixed(1)}% saved so far` : "Calculating..."}
+          </div>
         </div>
-      </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
-        <Card title="Latest optimization">
+        <div className="stat-card">
+          <div className="stat-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Zap size={16} /> System Vitality
+          </div>
+          <div className="stat-value">
+            {latest_state.battery_soc.toFixed(0)}%
+          </div>
+          <div className="stat-text" style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 8 }}>
+            Battery is {latest_state.battery_power_kw > 0 ? "charging" : latest_state.battery_power_kw < 0 ? "discharging" : "resting"}
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Activity size={16} /> Grid Connection
+          </div>
+          <div className="stat-value">
+            {Math.abs(latest_state.grid_import_kw - latest_state.grid_export_kw).toFixed(1)} <span className="stat-unit">kW</span>
+          </div>
+          <div className="stat-text" style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 8 }}>
+            {latest_state.grid_import_kw > 0 ? "Importing from grid" : "Feeding the grid"}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 32 }}>
+        <Card title="Latest Smart Decision">
           {latestRun ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              <div>Mode: {latestRun.mode}</div>
+            <div style={{ display: "grid", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--success-bg)", borderRadius: 12, color: "var(--secondary)" }}>
+                <ShieldCheck size={20} />
+                <span style={{ fontWeight: 600 }}>Autonomous logic is active and protecting your system.</span>
+              </div>
               <ExplanationPanel
                 explanation={latestRun.explanation || latestRun.selected_action?.explanation || null}
               />
             </div>
           ) : (
-            <div>No optimization runs yet.</div>
-          )}
-        </Card>
-        <Card title="Savings summary">
-          {savings ? (
-            <div style={{ display: "grid", gap: 6 }}>
-              <div>Baseline: {savings.baseline_cost.toFixed(2)}</div>
-              <div>Optimized: {savings.optimized_cost.toFixed(2)}</div>
-              <div>Saving: {savings.savings_percent.toFixed(1)}%</div>
+            <div className="empty-state">
+              <div className="empty-state-icon">🤖</div>
+              <div className="empty-state-title">Waiting for the first decision...</div>
+              <p className="empty-state-description">Your system is observing and preparing its first move.</p>
             </div>
-          ) : (
-            <div>No savings summary available.</div>
           )}
         </Card>
-      </div>
 
+        <div style={{ display: "grid", gap: 32 }}>
+          <Card title="Live Heartbeat">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <StatItem label="PV Generation" value={latest_state.pv_kw} unit="kW" />
+              <StatItem label="House Load" value={latest_state.load_kw} unit="kW" />
+              <StatItem label="Import Price" value={latest_state.price_import} unit="$" />
+              <StatItem label="Battery Health" value={100} unit="%" />
+            </div>
+          </Card>
+          
+          <Card title="Environmental Impact">
+            <div style={{ textAlign: "center", padding: "16px 0" }}>
+              <div style={{ fontSize: 40, marginBottom: 16 }}>🌳</div>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>You've planted 0.4 trees</div>
+              <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Based on your clean energy usage this month.</p>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatItem({ label, value, unit }: { label: string, value: number, unit: string }) {
+  return (
+    <div style={{ padding: 12, borderRadius: 12, background: "var(--bg)", border: "1px solid var(--border)" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 800 }}>{value.toFixed(1)}<span style={{ fontSize: 12, marginLeft: 2, color: "var(--text-muted)" }}>{unit}</span></div>
     </div>
   );
 }

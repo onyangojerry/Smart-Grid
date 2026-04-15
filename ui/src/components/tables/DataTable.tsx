@@ -14,27 +14,25 @@ type DataTableProps<T> = {
 
 export function DataTable<T>({ rows, columns, getRowKey }: DataTableProps<T>) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--card-bg)", color: "var(--text)" }}>
-      <thead>
-        <tr>
-          {columns.map((col) => (
-            <th key={col.key} style={{ textAlign: "left", padding: 10, borderBottom: "1px solid var(--border)", fontSize: 13, color: "var(--text-muted)" }}>
-              {col.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={getRowKey(row)}>
+    <div className="data-table-container">
+      <table className="data-table">
+        <thead>
+          <tr>
             {columns.map((col) => (
-              <td key={col.key} style={{ padding: 10, borderBottom: "1px solid var(--border)", fontSize: 14 }}>
-                {col.render(row)}
-              </td>
+              <th key={col.key}>{col.header}</th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={getRowKey(row)}>
+              {columns.map((col) => (
+                <td key={col.key}>{col.render(row)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

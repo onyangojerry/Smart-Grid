@@ -12,20 +12,19 @@ export function Topbar() {
     <header className="topbar">
       <div className="topbar-left">
         <Link to="/" className="topbar-logo">
-          {/* <span className="topbar-logo-icon">⚡</span> */}
           <strong className="topbar-logo-text">SmartGrid</strong>
         </Link>
       </div>
 
       <div className="topbar-right">
         <div className="theme-switcher">
-          {(["light", "dark", "industrial"] as const).map((t) => (
+          {(["light", "dark"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTheme(t)}
               className={theme === t ? "theme-button active" : "theme-button"}
             >
-              {t.toUpperCase()}
+              {t === "light" ? "Bright" : "Deep"}
             </button>
           ))}
         </div>
@@ -33,11 +32,11 @@ export function Topbar() {
         <div className="auth-nav">
           {!isAuthenticated ? (
             <>
-              <button onClick={() => navigate("/login")} className="login-link-btn">
+              <button onClick={() => navigate("/login")} className="btn btn-secondary btn-sm">
                 Login
               </button>
-              <button onClick={() => navigate("/signup")} className="signup-btn">
-                Sign Up
+              <button onClick={() => navigate("/signup")} className="btn btn-primary btn-sm">
+                Join Now
               </button>
             </>
           ) : (

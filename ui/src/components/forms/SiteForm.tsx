@@ -12,6 +12,7 @@ export function SiteForm({ onSubmit, loading }: Props) {
 
   return (
     <form
+      className="auth-form"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit({
@@ -22,12 +23,30 @@ export function SiteForm({ onSubmit, loading }: Props) {
           polling_interval_seconds: 300
         });
       }}
-      style={{ display: "grid", gap: 8 }}
+      style={{ maxWidth: 400 }}
     >
-      <input required placeholder="Site name" value={name} onChange={(e) => setName(e.target.value)} />
-      <input required placeholder="Timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} />
-      <button disabled={loading} type="submit">
-        {loading ? "Creating..." : "Create site"}
+      <div className="form-group">
+        <label className="form-label">Site Name</label>
+        <input 
+          className="form-input"
+          required 
+          placeholder="e.g. My Sunny Home" 
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+        />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Timezone</label>
+        <input 
+          className="form-input"
+          required 
+          placeholder="e.g. Australia/Sydney" 
+          value={timezone} 
+          onChange={(e) => setTimezone(e.target.value)} 
+        />
+      </div>
+      <button className="btn btn-primary" disabled={loading} type="submit" style={{ marginTop: 8 }}>
+        {loading ? "Creating..." : "Create My Home"}
       </button>
     </form>
   );

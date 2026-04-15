@@ -1,66 +1,64 @@
 :root {
-  /* Light Theme (Default) */
-  --primary: #0d47a1;
-  --primary-hover: #1565c0;
-  --bg: #f6f8fb;
+  /* Warm & Human Theme (Refined) */
+  --primary: #F97316;       /* Energetic Orange (The Sun) */
+  --primary-hover: #EA580C;
+  --secondary: #064E3B;     /* Deep Emerald (The Earth) */
+  --bg: #FDFCFB;            /* Soft Cream-White (Paper-like) */
   --card-bg: #ffffff;
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: #064E3B;    /* Deep Emerald Sidebar */
   --topbar-bg: #ffffff;
-  --border: #dddddd;
-  --text: #222222;
-  --text-muted: #666666;
-  --accent: #0d47a1;
-  --success: #2e7d32;
-  --success-bg: #e8f5e9;
-  --warning: #f57c00;
-  --error: #d32f2f;
-  --radius: 8px;
-  --mono: "DM Mono", monospace;
-  --syne: "Syne", sans-serif;
+  --border: #E5E7EB;
+  --text: #1F2937;          /* Near Black */
+  --text-muted: #6B7280;
+  --accent: #8B5CF6;        /* Intelligence Violet */
+  --success: #10B981;
+  --success-bg: #ECFDF5;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  
+  /* Typography */
+  --font-serif: "Fraunces", serif;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "DM Mono", monospace;
+  
+  --radius: 24px;           /* Soft, modern corners for cards */
+  --glow: 0 0 20px rgba(249, 115, 22, 0.2);
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
 }
 
 [data-theme='dark'] {
-  --primary: #2196f3;
-  --primary-hover: #42a5f5;
-  --bg: #0f172a;
-  --card-bg: #1e293b;
-  --sidebar-bg: #1e293b;
-  --topbar-bg: #1e293b;
+  --primary: #FB923C;
+  --primary-hover: #F97316;
+  --bg: #0F172A;
+  --card-bg: #1E293B;
+  --sidebar-bg: #020617;
+  --topbar-bg: #1E293B;
   --border: #334155;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --accent: #38bdf8;
-  --success: #22c55e;
-  --success-bg: rgba(34, 197, 94, 0.15);
-  --warning: #f59e0b;
-  --error: #ef4444;
-}
-
-[data-theme='industrial'] {
-  --primary: #ffb300;
-  --primary-hover: #ffca28;
-  --bg: #121212;
-  --card-bg: #1a1a1a;
-  --sidebar-bg: #1a1a1a;
-  --topbar-bg: #222222;
-  --border: #333333;
-  --text: #e0e0e0;
-  --text-muted: #9e9e9e;
-  --accent: #ffb300;
-  --success: #4caf50;
-  --success-bg: rgba(76, 175, 80, 0.15);
-  --warning: #ff9800;
-  --error: #f44336;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --accent: #A78BFA;
+  --success: #34D399;
+  --success-bg: rgba(52, 211, 153, 0.15);
+  --warning: #FBBF24;
+  --error: #F87171;
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg);
   color: var(--text);
   transition: background-color 0.3s, color 0.3s;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 * {
@@ -69,7 +67,9 @@ body {
 
 button {
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 a {
@@ -79,4 +79,13 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Base utility for glow */
+.glow-primary {
+  box-shadow: var(--glow);
+}
+
+.card-shadow {
+  box-shadow: var(--shadow);
 }
