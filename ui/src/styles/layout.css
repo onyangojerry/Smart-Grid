@@ -302,7 +302,7 @@
 
 .page-container {
   flex: 1;
-  padding: 32px;
+  padding: 0;
   overflow-y: auto;
   height: calc(100vh - 64px);
   background: var(--bg);
